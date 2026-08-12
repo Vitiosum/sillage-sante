@@ -1,0 +1,11 @@
+:root { color-scheme: light; --trait: #d8dee4; --texte: #16232e; --accent: #1f6f8b; }
+* { box-sizing: border-box; }
+body { margin: 0; font-family: ui-sans-serif, system-ui, sans-serif; color: var(--texte); }
+.barre { display: flex; gap: 2rem; align-items: baseline; padding: 1rem 1.5rem; border-bottom: 1px solid var(--trait); }
+.barre nav a { margin-right: 1rem; color: var(--accent); text-decoration: none; }
+main { max-width: 60rem; margin: 0 auto; padding: 1.5rem; }
+.carte { border: 1px solid var(--trait); border-radius: 6px; padding: 1rem; margin-bottom: .75rem; }
+button { font: inherit; padding: .5rem .9rem; border: 1px solid var(--accent); background: var(--accent); color: #fff; border-radius: 4px; cursor: pointer; }
+button:disabled { opacity: .5; cursor: not-allowed; }
+input, textarea { font: inherit; padding: .5rem; border: 1px solid var(--trait); border-radius: 4px; width: 100%; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }

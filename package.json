@@ -1,0 +1,28 @@
+{
+  "name": "sillage-sante",
+  "version": "0.3.0",
+  "private": true,
+  "description": "Plateforme de teleconsultation et de suivi de dossiers patients - demo Supabase Cloud",
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "db:push": "supabase db push",
+    "db:reset": "supabase db reset",
+    "functions:deploy": "supabase functions deploy",
+    "types:gen": "supabase gen types typescript --linked > lib/types.ts"
+  },
+  "dependencies": {
+    "@supabase/ssr": "^0.5.2",
+    "@supabase/supabase-js": "^2.45.4",
+    "next": "14.2.15",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
+  },
+  "devDependencies": {
+    "@types/node": "^20.14.10",
+    "@types/react": "^18.3.3",
+    "supabase": "^1.200.3",
+    "typescript": "^5.5.4"
+  }
+}
