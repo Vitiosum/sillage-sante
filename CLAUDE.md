@@ -177,7 +177,32 @@ En revanche, tout le reste s'est fait en ligne de commande — y compris ce que
 DEPLOIEMENT.md donnait pour manuel (activation du hook GoTrue, jobs cron,
 trigger de webhook), une fois `config push` et les migrations bien employés.
 
-Puis, une fois deux ou trois consultations saisies :
+#### Charge et recette
+
+Le corpus ne se limite plus à trois lignes. Enchaînement complet :
+
+```bash
+./scripts/comptes-demo.sh                                    # 3 comptes GoTrue
+psql "$SUPABASE_DB_URL" -f scripts/donnees-demo.sql          # repare les roles, pose le jeu de base
+psql "$SUPABASE_DB_URL" -v n=20000 -f scripts/volume-demo.sql # 20k consultations + embeddings
+./scripts/objets-demo.py                                     # objets dans les 4 buckets
+./scripts/sessions-mfa.py                                    # sessions reelles + TOTP (aal2)
+./scripts/recette-rls.py                                     # matrice RLS par identite
+```
+
+État atteint : 20 001 consultations dont 20 000 avec embedding `vector(1536)`,
+20 003 rendez-vous, 501 patients, 5 objets Storage, 6 sessions, 1 facteur TOTP.
+Base : **363 Mo**.
+
+`recette-rls.py` est le **test de recette de la migration** : rejoué sur
+Clever Cloud, une matrice identique vaut preuve de reprise fidèle.
+
+Les chiffres de la fenêtre de bascule et les quatre plafonds rencontrés
+(`maintenance_work_mem` 32 Mo, `statement_timeout` 2 min, 500 Mo de plan
+gratuit, bloat MVCC) sont dans
+[CONSTATS-DEPLOIEMENT.md](CONSTATS-DEPLOIEMENT.md).
+
+Puis, une fois le corpus charge :
 
 ```bash
 supabase db dump -f dump_schema.sql
