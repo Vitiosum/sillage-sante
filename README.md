@@ -5,6 +5,7 @@
 > la cible, la cartographie des composants et les règles de travail.
 >
 > Déploiement de la source pas à pas : [DEPLOIEMENT.md](DEPLOIEMENT.md)
+> Ce que le déploiement réel a révélé : [CONSTATS-DEPLOIEMENT.md](CONSTATS-DEPLOIEMENT.md)
 
 Plateforme de téléconsultation et de suivi de dossiers patients, construite sur
 **Supabase Cloud**. Next.js 14 (App Router) côté front, PostgREST appelé

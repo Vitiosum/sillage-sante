@@ -41,9 +41,50 @@ utile pour la démo, pas un défaut à corriger.
 | `post-deploiement.sql` | `./scripts/post-deploiement.sh <ref>` | **à faire** — dépend de `.env.local` |
 | Comptes de test | SQL Editor, étape 7 de DEPLOIEMENT.md | **à faire** |
 
-Vérifié en base : 16 tables (15 `medical` + 1 `audit`).
-`medical.consultations` porte 1,6 Mo d'index sur une table vide — c'est
-l'index `ivfflat`, donc `vector` est bien actif.
+#### Relevé réel en base
+
+| | |
+|---|---|
+| Tables | 16 (15 `medical` + 1 `audit`) |
+| Extensions | **16**, dont `postgis` 3.3.7, `vector` 0.8.2, `pgmq` 1.5.1, `pg_cron` 1.6.4, `pg_net` 0.20.4, `supabase_vault` 0.3.1, **`pgsodium` 3.1.8**, `pgjwt` 0.2.0 |
+| Policies | 55 (`medical`, `storage`, `realtime`, `public`) |
+| Buckets | 4 — `avatars`, `documents-medicaux`, `imagerie`, `ordonnances` |
+| Realtime | 3 tables publiées |
+| Jobs cron | 3 (5 après `post-deploiement.sql`) |
+
+**`pgsodium` est bien là.** DEPLOIEMENT.md annonçait qu'il n'était plus
+provisionné : faux sur un projet créé en août 2026. Le chiffrement TCE de
+`patients.nir_chiffre` est donc **actif**, et le point dur n°1 du README se
+démontre en conditions réelles — c'est mieux pour la démo, et ça change
+l'arbitrage : on ne migre pas un chiffrement théorique, on migre un
+`security label` qui existe et qui ne se restaure pas par `pg_restore`.
+
+Astuce de relevé, faute de Docker et de mot de passe : une migration jetable
+qui `raise exception` renvoie l'état dans la sortie de `db push`, et la
+transaction est annulée. Détail dans DEPLOIEMENT.md.
+
+#### Correctif appliqué : droits du hook GoTrue
+
+`supabase config push` active le hook `custom_access_token`. Or
+`20260114090500_auth_hook_claims.sql` oubliait deux choses, et la fonction est
+`stable` et non `security definer` — elle s'exécute donc avec les droits de
+`supabase_auth_admin` :
+
+- pas de `grant usage on schema medical` → `permission denied for schema
+  medical`, GoTrue rend **HTTP 500 à chaque émission de jeton**. Plus aucune
+  connexion possible, ni patient ni praticien ;
+- policy de lecture créée sur `medical.profils` seulement, pas sur
+  `praticiens` ni `patients` → les deux `select … into` renvoyaient zéro ligne
+  en silence, donc `praticien_id` et `patient_id` absents du JWT.
+
+Corrigé par `20260813120000_hook_grants_medical.sql`, qui se termine par un
+bloc d'assertion sur `has_schema_privilege` / `has_table_privilege` : la
+migration échoue si les droits ne sont pas effectifs. Elle est passée.
+
+Le bug préexistait — la procédure demandait d'activer le hook à la main, donc
+n'importe qui l'aurait touché. C'est un bon exemple de ce que la démo doit
+montrer : la surface Supabase cache des dépendances de droits invisibles tant
+qu'on n'exécute pas.
 
 #### Ce que l'exécution réelle a corrigé dans la procédure
 
@@ -106,6 +147,12 @@ portable et en assumant les arbitrages à voix haute. Ce qu'on ne migre pas doit
 Les 18 points durs sont listés dans la section « Points volontairement
 difficiles » du [README](README.md). **Un plan de migration qui n'en mentionne
 pas au moins la majorité est incomplet.**
+
+À lire avant d'attaquer la cible :
+[CONSTATS-DEPLOIEMENT.md](CONSTATS-DEPLOIEMENT.md) — 25 constats retenus sur 93
+instruits, recroisés avec l'état réel de la base. C'est la matière brute du plan
+de migration, et la preuve que sur cette surface rien ne se déduit : tout se
+relève.
 
 ## Cartographie Supabase → Clever Cloud (hypothèse de travail)
 

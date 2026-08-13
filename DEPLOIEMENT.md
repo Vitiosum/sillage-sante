@@ -30,11 +30,15 @@ incomplets ([supabase/cli#1591](https://github.com/supabase/cli/issues/1591)),
 et l'extension refuse tout schéma autre que `pg_catalog`
 ([supabase#27062](https://github.com/supabase/supabase/issues/27062)).
 
-`pgsodium` peut échouer : il est
-[déprécié](https://supabase.com/docs/guides/database/extensions/pgsodium) et
-n'est plus provisionné sur les nouveaux projets. Ce n'est pas bloquant — les
-migrations le détectent et le chiffrement du NIR bascule sur `lib/chiffrement.ts`.
-Note-le, c'est justement un des points que le plan de migration doit relever.
+**Correction du 13 août 2026 :** `pgsodium` est annoncé
+[déprécié](https://supabase.com/docs/guides/database/extensions/pgsodium), mais
+sur un projet créé aujourd'hui il **s'installe toujours** — relevé en
+`pgsodium 3.1.8`. Le chiffrement TCE de `patients.nir_chiffre` est donc bien
+actif, et le point dur n°1 du README se démontre en vrai plutôt qu'en théorie.
+La bascule vers `lib/chiffrement.ts` reste le plan de repli, pas l'état courant.
+
+Même remarque pour `pgjwt` (0.2.0) et `pg_net` (0.20.4) : présents tous les
+deux, contrairement à ce qu'on pouvait craindre sur un projet 2026.
 
 ## 3. Récupérer les clés
 
@@ -173,8 +177,45 @@ select schemaname, tablename from pg_publication_tables where pubname = 'supabas
 select id, public from storage.buckets;
 ```
 
-Attendu : environ 45 policies, 3 buckets, 3 tables publiées, 4 jobs cron si
-`pg_cron` est actif.
+Relevé réellement le 13 août 2026 sur un projet neuf, après `db push` et avant
+`post-deploiement.sql` :
+
+| Contrôle | Attendu |
+|---|---|
+| Policies (`medical`, `storage`, `realtime`, `public`) | **55** |
+| Buckets | **4** — `avatars` (2 Mio), `documents-medicaux` (50 Mio), `imagerie` (5 Gio), `ordonnances` (5 Mio) |
+| Tables publiées en Realtime | **3** — `medical.messages`, `medical.notifications`, `medical.rendez_vous` |
+| Jobs `cron` | **3** après `db push` (`purge-documents-infectes`, `purge-journal-acces`, `reindex-embeddings`), **5** après `post-deploiement.sql` |
+| Extensions | **16** (liste ci-dessous) |
+
+Les anciens chiffres de ce document (« environ 45 policies, 3 buckets, 4 jobs
+cron ») ne correspondaient à aucun état atteignable et envoyaient chercher une
+migration fantôme.
+
+```text
+btree_gist 1.7      pg_cron 1.6.4     pg_graphql 1.6.1   pg_net 0.20.4
+pg_stat_statements  pg_trgm 1.6       pgcrypto 1.3       pgjwt 0.2.0
+pgmq 1.5.1          pgsodium 3.1.8    plpgsql 1.0        postgis 3.3.7
+supabase_vault 0.3.1  unaccent 1.1    uuid-ossp 1.1      vector 0.8.2
+```
+
+### Lire l'état de la base sans mot de passe
+
+`supabase db dump` exige Docker et `psql` réclame le mot de passe. Pour un
+simple relevé, une migration jetable qui `raise exception` fait l'affaire : le
+message remonte dans la sortie de `db push` et la transaction est annulée, donc
+rien n'est écrit ni enregistré dans `schema_migrations`.
+
+```sql
+do $$
+declare v_ext text;
+begin
+  select string_agg(extname || ':' || extversion, ' ' order by extname) into v_ext from pg_extension;
+  raise exception 'DIAGNOSTIC %', v_ext;
+end $$;
+```
+
+Supprimer le fichier juste après lecture.
 
 ## Pour la suite : le dump à migrer
 
