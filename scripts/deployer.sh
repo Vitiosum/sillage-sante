@@ -33,6 +33,7 @@ supabase functions deploy rappel-rdv          --no-verify-jwt
 supabase functions deploy document-scan       --no-verify-jwt
 supabase functions deploy ordonnance-pdf
 supabase functions deploy recherche-semantique
+supabase functions deploy traiter-files      --no-verify-jwt
 
 echo "==> 5/5  Etat du projet"
 supabase functions list

@@ -20,6 +20,8 @@ create extension if not exists "pg_net"      with schema extensions;
 create extension if not exists "vector"      with schema extensions;
 
 create extension if not exists "pg_graphql";
+create extension if not exists "postgis" with schema extensions;
+create extension if not exists "pgmq";
 create extension if not exists "supabase_vault";
 
 -- pg_cron n'accepte que pg_catalog sur Supabase

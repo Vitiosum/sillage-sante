@@ -73,6 +73,9 @@ PostgreSQL
 | `..._storage.sql` | 3 buckets, 9 policies `storage.objects` |
 | `..._realtime.sql` | Publication logique, `replica identity full`, policies sur `realtime.messages` |
 | `..._vault_cron_net.sql` | 3 secrets Vault, trigger `pg_net`, 4 jobs `pg_cron` |
+| `..._geolocalisation.sql` | PostGIS, `geography(point)` sur les cabinets, index gist, RPC de recherche par rayon, zones d'intervention en polygone |
+| `..._webhooks_et_files.sql` | Database Webhook (`supabase_functions.http_request`), 3 files `pgmq`, trigger d'empilement |
+| `..._storage_avance.sql` | Bucket `imagerie` 5 Go, suivi des téléversements TUS, vue de volumétrie |
 
 ### Edge Functions — `supabase/functions/`
 
@@ -80,6 +83,7 @@ PostgreSQL
 - `ordonnance-pdf` — génère le PDF, le dépose sur le Storage, calcule l'empreinte
 - `document-scan` — webhook antivirus, authentifié par HMAC
 - `recherche-semantique` — embedding OpenAI puis `pgvector` via RPC
+- `traiter-files` — consomme les files `pgmq`, recalcule les embeddings
 
 ### Front — `app/`, `lib/`
 
@@ -89,6 +93,8 @@ PostgreSQL
 - `app/teleconsultation/[id]/page.tsx` — Presence + Broadcast (signalisation WebRTC)
 - `app/documents/page.tsx` — chiffrement AES-GCM navigateur avant upload, URL signée
 - `lib/chiffrement.ts` — clé applicative issue de l'environnement
+- `lib/storage.ts` — transformation d'image à la volée, upload reprenable TUS
+- `app/recherche/page.tsx` — RPC PostGIS `st_dwithin` depuis la géoloc navigateur
 
 ## Points volontairement difficiles
 
@@ -120,7 +126,19 @@ incomplet.
     `PGRST_DB_SCHEMAS`. La config PostgREST cible doit reproduire ce périmètre.
 11. **`app/api-recherche.ts`** — appelle `supabase.functions.invoke()`, donc une
     URL de fonction à réécrire, pas seulement l'URL de base.
-12. **Trois clés distinctes** — `anon` dans le navigateur, `service_role` côté
+12. **`supabase_functions.http_request`** — les Database Webhooks du dashboard
+    sont une surcouche maison à `pg_net`, absente d'un PostgreSQL standard. Le
+    trigger `rdv_confirme_webhook` en dépend.
+13. **`pgmq`** — trois files d'attente et un trigger d'empilement. L'extension
+    existe en open source, mais l'intégration « Queues » du dashboard non.
+14. **PostGIS** — extension lourde, à confirmer sur la plateforme cible.
+15. **Transformation d'image Storage** — `getPublicUrl(..., { transform })`
+    s'appuie sur imgproxy, un conteneur de plus à déployer.
+16. **Upload reprenable TUS** — endpoint `/storage/v1/upload/resumable`, taille
+    de segment imposée à 6 Mio. À vérifier derrière un autre load balancer.
+17. **Auth anonyme + liaison d'identités** — la pré-inscription crée un
+    utilisateur anonyme fusionné ensuite. Comportement GoTrue à valider.
+18. **Trois clés distinctes** — `anon` dans le navigateur, `service_role` côté
     serveur et dans deux Edge Functions, `SUPABASE_JWT_SECRET` pour les signer.
     Toutes à régénérer de façon cohérente.
 

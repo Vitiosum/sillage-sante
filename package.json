@@ -10,14 +10,16 @@
     "db:push": "supabase db push",
     "db:reset": "supabase db reset",
     "functions:deploy": "supabase functions deploy",
-    "types:gen": "supabase gen types typescript --linked > lib/types.ts"
+    "types:gen": "supabase gen types typescript --linked > lib/types.ts",
+    "sql:check": "python3 -c \"import glob,pglast;[pglast.parse_sql(open(f).read()) for f in glob.glob('supabase/migrations/*.sql')];print('SQL OK')\""
   },
   "dependencies": {
     "@supabase/ssr": "^0.5.2",
     "@supabase/supabase-js": "^2.45.4",
     "next": "14.2.15",
     "react": "^18.3.1",
-    "react-dom": "^18.3.1"
+    "react-dom": "^18.3.1",
+    "tus-js-client": "^4.1.0"
   },
   "devDependencies": {
     "@types/node": "^20.14.10",
