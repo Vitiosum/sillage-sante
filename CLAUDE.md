@@ -15,7 +15,7 @@ tourne**. Time-to-demo court, architecture lisible.
 
 ## Les deux phases
 
-### Phase 1 — Faire vivre la source (Supabase Cloud) — **en cours**
+### Phase 1 — Faire vivre la source (Supabase Cloud) — **terminée**
 
 Objectif : un système réellement déployé, avec des données, pour produire les
 dumps qui serviront de matière à la migration. Procédure complète dans
@@ -37,9 +37,24 @@ utile pour la démo, pas un défaut à corriger.
 | 12 migrations | `supabase db push --include-all` | fait, aucune erreur |
 | Config projet | `NEXT_PUBLIC_SITE_URL=http://localhost:3000 supabase config push` | fait — api, db, auth, storage `up_to_date` |
 | 5 Edge Functions | `supabase functions deploy` | fait, les 5 `ACTIVE` |
-| Secrets fonctions | `supabase secrets set --env-file …` | **à faire** — dépend de `.env.local` |
-| `post-deploiement.sql` | `./scripts/post-deploiement.sh <ref>` | **à faire** — dépend de `.env.local` |
-| Comptes de test | SQL Editor, étape 7 de DEPLOIEMENT.md | **à faire** |
+| Secrets fonctions | `supabase secrets set --env-file …` | fait — 3 poussés |
+| Database Webhooks | Integrations → Database Webhooks → Install | fait |
+| Secret du Vault | `./scripts/post-deploiement.sh <ref>` | fait — `service_role_key` posé |
+| Comptes de test | `./scripts/comptes-demo.sh` | fait — 3 comptes |
+| Données de démo | `psql "$SUPABASE_DB_URL" -f scripts/donnees-demo.sql` | fait |
+| Dumps | `pg_dump` natif | fait — 3 fichiers |
+
+#### La chaîne tourne réellement
+
+Vérifié, pas déduit. Un `update medical.rendez_vous set statut = 'confirme'`
+déclenche `rdv_confirme_webhook` → `supabase_functions.http_request` →
+`pg_net` → Edge Function `rappel-rdv`, qui répond `200 {"traites":1}`. En
+parallèle, le job `pg_cron` `traiter-files` s'exécute seul toutes les 5
+minutes en lisant la clé `service_role` dans le Vault. Les réponses sont
+lisibles dans `net._http_response`.
+
+C'est la boucle complète — cron, pg_net, Vault, PostgREST, Edge Functions —
+et c'est elle qu'il faut reconstituer sur Clever Cloud.
 
 #### Relevé réel en base
 
@@ -119,14 +134,48 @@ retrouvera.
    deploy` sans aucun flag, `functions list` renvoie exactement les
    `verify_jwt` de `config.toml`. C'est la config qui fait foi.
 
-#### Ce qui n'est pas scriptable depuis cette machine
+#### Les dumps : ce qu'ils disent déjà
 
-- **`supabase db dump` exige Docker**, absent ici. `pg_dump` et `psql` natifs
-  sont disponibles mais réclament le mot de passe de la base. Les trois dumps
-  de la phase 2 passent donc par un `SUPABASE_DB_URL` renseigné dans
-  `.env.local`, ou par l'installation de Docker Desktop.
-- **Les clés d'API du projet** (`anon`, `service_role`) : à récupérer dans
-  Project Settings → API et à coller dans `.env.local`.
+Produits avec `pg_dump` natif via le Session pooler (`aws-1-eu-west-1`,
+compatible IPv4 — la connexion directe est IPv6 par défaut). `supabase db
+dump` n'a pas servi : il lance `pg_dump` dans un conteneur et Docker est
+absent de la machine.
+
+```bash
+pg_dump "$SUPABASE_DB_URL" --schema-only --schema=medical --schema=audit --schema=auth_hooks --schema=public -f dump_schema.sql
+pg_dump "$SUPABASE_DB_URL" --data-only --schema=medical --schema=audit -f dump_data.sql
+pg_dump "$SUPABASE_DB_URL" --schema=auth --schema=storage -f dump_auth.sql
+```
+
+Premier dépouillement de `dump_schema.sql` — c'est la liste des choses qui ne
+se restaurent pas telles quelles :
+
+| Ce qu'on trouve | Occurrences | Conséquence sur la cible |
+|---|---|---|
+| `SECURITY LABEL FOR pgsodium ON COLUMN medical.patients.nir_chiffre` | 1 | échoue sans pgsodium : c'est le point dur n°1, et il est bien réel |
+| `postgres` | 287 | propriétaire de tout ; porte **BYPASSRLS** sur Supabase, pas acquis ailleurs |
+| `authenticated` / `anon` / `service_role` | 72 / 38 / 31 | doivent préexister, et `authenticator` doit pouvoir les endosser |
+| `supabase_admin` | 15 | rôle de l'image Supabase, sans équivalent |
+| `supabase_auth_admin` | 9 | GoTrue ; le hook et ses GRANTs en dépendent |
+| `supabase_functions.http_request` | 2 | surcouche dashboard, à réécrire |
+| `vault.decrypted_secrets` | 2 | à remplacer par des variables d'environnement |
+| `pgsodium.crypto_aead_det_encrypt` / `_decrypt` | 2 | bascule vers `lib/chiffrement.ts` |
+| `pgmq.send` / `pgmq.read`, `net.http_post` | 3 | files et appels sortants à sortir de la base |
+
+Les dumps sont couverts par `.gitignore` (`dump_*.sql`) : ils contiennent des
+données et les secrets du Vault.
+
+#### Ce qui n'a pas pu être scripté depuis cette machine
+
+- **Les clés d'API et le mot de passe de la base.** Seul l'humain les récupère
+  dans le dashboard. Le mot de passe n'est affiché qu'à la création du projet ;
+  passé ce point, la seule option est **Reset database password**.
+- **L'installation d'un module d'Integrations** (ici Database Webhooks) :
+  bouton du dashboard, pas d'équivalent CLI.
+
+En revanche, tout le reste s'est fait en ligne de commande — y compris ce que
+DEPLOIEMENT.md donnait pour manuel (activation du hook GoTrue, jobs cron,
+trigger de webhook), une fois `config push` et les migrations bien employés.
 
 Puis, une fois deux ou trois consultations saisies :
 
