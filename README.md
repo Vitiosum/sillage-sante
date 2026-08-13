@@ -1,6 +1,10 @@
 # Sillage Santé
 
-> Déploiement pas à pas : voir [DEPLOIEMENT.md](DEPLOIEMENT.md)
+> **Objectif : démo de migration Supabase Cloud → Clever Cloud.**
+> Ce dépôt est le cas de test, pas un produit. Voir [CLAUDE.md](CLAUDE.md) pour
+> la cible, la cartographie des composants et les règles de travail.
+>
+> Déploiement de la source pas à pas : [DEPLOIEMENT.md](DEPLOIEMENT.md)
 
 Plateforme de téléconsultation et de suivi de dossiers patients, construite sur
 **Supabase Cloud**. Next.js 14 (App Router) côté front, PostgREST appelé
