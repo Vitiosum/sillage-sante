@@ -6,6 +6,7 @@
 >
 > Déploiement de la source pas à pas : [DEPLOIEMENT.md](DEPLOIEMENT.md)
 > Ce que le déploiement réel a révélé : [CONSTATS-DEPLOIEMENT.md](CONSTATS-DEPLOIEMENT.md)
+> La méthode, déroulée sur ce cas : [PROCEDURE-MIGRATION.md](PROCEDURE-MIGRATION.md)
 
 Plateforme de téléconsultation et de suivi de dossiers patients, construite sur
 **Supabase Cloud**. Next.js 14 (App Router) côté front, PostgREST appelé
