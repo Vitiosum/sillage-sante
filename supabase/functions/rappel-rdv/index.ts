@@ -11,13 +11,21 @@ Deno.serve(async (req) => {
 
   const supabase = clientAdmin();
 
+  // medical.rendez_vous.creneau est un tstzrange (contrainte d'exclusion gist
+  // sur l'agenda), pas un timestamp : on selectionne les rendez-vous qui
+  // chevauchent les 24 prochaines heures, ce qui ecarte aussi le passe.
+  const maintenant = new Date();
+  const dans24h = new Date(maintenant.getTime() + 24 * 3600 * 1000);
+
+  // .schema() se pose sur le client, avant .from() : en fin de chaine c'est
+  // un PostgrestFilterBuilder, qui n'a pas cette methode -> TypeError, 500.
   const { data: rdvs, error } = await supabase
+    .schema('medical')
     .from('rendez_vous')
     .select('id, creneau, teleconsultation, patients(prenom, nom_naissance, profils(id, telephone)), praticiens(specialite, profils(nom))')
     .eq('statut', 'confirme')
     .is('rappel_envoye_a', null)
-    .lte('creneau', new Date(Date.now() + 24 * 3600 * 1000).toISOString())
-    .schema('medical');
+    .overlaps('creneau', `[${maintenant.toISOString()},${dans24h.toISOString()})`);
 
   if (error) return reponseJson({ erreur: error.message }, 500);
 
