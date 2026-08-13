@@ -44,16 +44,27 @@ fi
 umask 077
 sed -e "s|<PROJECT_REF>|$REF|g" -e "s|<SERVICE_ROLE_KEY>|$CLE|g" "$SOURCE" > "$CIBLE"
 
+# Directement dans le presse-papier : le SQL Editor empile le contenu des
+# onglets, un copier-coller manuel finit par executer trois scripts a la file.
+if command -v pbcopy >/dev/null 2>&1; then
+  pbcopy < "$CIBLE"
+  COPIE="  (deja dans le presse-papier)"
+else
+  COPIE=""
+fi
+
 cat <<FIN
 
-Genere : $CIBLE  (ignore par git, permissions 600)
+Genere : $CIBLE  (ignore par git, permissions 600)$COPIE
 
 Etape suivante, a la main :
-  1. Ouvrir https://supabase.com/dashboard/project/$REF/sql/new
-  2. Coller le contenu de post-deploiement.local.sql
-  3. Run
+  1. https://supabase.com/dashboard/project/$REF/sql/new
+     Ouvrir un onglet VIDE : le SQL Editor conserve le contenu precedent.
+  2. Coller, puis Run.
+  3. Le second select doit rendre une longueur egale a celle de la cle du
+     dashboard. 26 caracteres = la valeur par defaut, le secret n'a pas pris.
 
-Puis supprimer le fichier :
+Puis supprimer le fichier, il contient la cle en clair :
   rm $CIBLE
 
 FIN
