@@ -44,6 +44,11 @@ etat() {
   elif [[ "$valeur" == *xxxxxxxx* || "$valeur" == *"...."* || "$valeur" == *"super-secret-jwt"* ]]; then
     printf '  %-32s VALEUR D EXEMPLE\n' "$nom"
     if [[ "$obligatoire" == oui ]]; then manquantes=$((manquantes + 1)); fi
+  # Placeholder non substitue : [YOUR-PASSWORD], <PROJECT_REF>, etc.
+  # Sans ce test le script annoncait "Complet" sur une URL inutilisable.
+  elif [[ "$valeur" == *"["*"]"* || "$valeur" == *"<"*">"* ]]; then
+    printf '  %-32s PLACEHOLDER NON REMPLACE\n' "$nom"
+    if [[ "$obligatoire" == oui ]]; then manquantes=$((manquantes + 1)); fi
   else
     printf '  %-32s rempli (%s caracteres)\n' "$nom" "${#valeur}"
   fi
