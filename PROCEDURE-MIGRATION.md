@@ -84,6 +84,17 @@ Deux choses que je n'avais pas vues à l'œil nu et que le relevé a sorties :
 table, parce que `pg_dump` écrit `[0.123,0.456,…]` au lieu du binaire `float4`.
 Extrapoler sur l'octet de dump, jamais sur la taille de table.
 
+### Mesurer à vide, sinon ne pas mesurer
+
+Le même dump de données a pris **102 s, puis 495 s**. Rien n'avait changé dans
+les données : la seconde mesure tournait pendant que le harnais de recette
+interrogeait la même instance NANO. **Facteur 5 par simple contention.**
+
+Conséquence de méthode : une mesure unique prise pendant qu'autre chose
+travaille ne vaut rien, et une fenêtre de bascule annoncée sur cette base est
+indéfendable. Mesurer sur une base au repos, et **annoncer une fourchette** —
+borne basse à vide, borne haute sous charge.
+
 ### Les quatre plafonds
 
 Tous silencieux jusqu'à ce qu'on les touche :
