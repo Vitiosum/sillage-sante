@@ -25,6 +25,9 @@ en place.
 | 5 | Policy de lecture du hook créée sur `medical.profils` seulement → `praticien_id` et `patient_id` absents du JWT, en silence | idem, policies ajoutées sur `praticiens` et `patients` |
 | 6 | Clé `service_role` à coller dans `post-deploiement.sql`, fichier suivi par git, dépôt public, workflow `git add .` documenté | `scripts/post-deploiement.sh` génère une copie ignorée par git |
 | 7 | Compteurs de vérification faux (« ~45 policies, 3 buckets, 4 jobs cron ») : aucun état atteignable | relevés réels dans DEPLOIEMENT.md |
+| 8 | Le SQL Editor exécute le batch **en une transaction** : l'absence de `supabase_functions` annulait les étapes 1 à 5 avec elle | tout passé en migration sauf la pose du secret ; l'étape webhook est gardée |
+| 9 | `seed.sql` n'est pas joué par `db push` (sortie : `"seeds":[]`) — le cabinet de démo n'existait jamais | `--include-seed`, puis migration de géolocalisation rejouée après |
+| 10 | Les deux bugs de `rappel-rdv` (voir plus bas) | corrigés, la fonction rend `200` |
 
 Le correctif n°4 mérite un mot : le bug préexistait, mais la procédure demandait
 d'activer le hook à la main — n'importe qui l'aurait déclenché. La fonction est
@@ -56,6 +59,35 @@ réelles — on migre un `security label` qui existe et qui ne se restaure pas p
 
 ---
 
+## Trouvé en exécutant, pas en lisant
+
+L'analyse statique n'a rien vu de ce qui suit. Il a fallu invoquer les
+fonctions et ouvrir une connexion `psql` pour que ça sorte. C'est l'argument
+central de la démarche : **sur cette surface, rien ne se déduit.**
+
+| Constat | Comment il est sorti |
+|---|---|
+| **`rappel-rdv` : `.schema('medical')` posé en fin de chaîne.** Sur un `PostgrestFilterBuilder`, qui n'a pas cette méthode → TypeError, HTTP 500. Les quatre autres fonctions utilisent la forme correcte. | `curl` sur la fonction |
+| **`rappel-rdv` : `creneau` est un `tstzrange`**, pas un timestamp — c'est la colonne qui porte la contrainte d'exclusion `gist`. Le `.lte()` rendait `malformed range literal` : cette requête n'a jamais pu fonctionner. | idem, après correction du premier bug |
+| **`postgres` porte `BYPASSRLS`** sur Supabase Cloud, ce qui prime sur `force row level security`. Un script d'insertion qui marche ici échouera sur un PostgreSQL managé où le propriétaire ne l'a pas. | insertion dans `medical.consultations` |
+| **`service_role` n'a aucun droit de lecture sur `auth.users`** malgré `BYPASSRLS`. Le contourner par `set role service_role` ne marche pas. | même insertion |
+| **La connexion directe est IPv6 par défaut.** Sur un réseau IPv4 il faut le Session pooler (`aws-1-eu-west-1.pooler.supabase.com`) ou l'add-on IPv4 payant. | panneau Connect |
+| **`diagnostic_cim10` est un tableau**, pas un texte. | insertion du compte rendu |
+| **`supabase_functions.http_request()` ne déclare aucun argument** : c'est une fonction *trigger*, ses cinq paramètres passent par `TG_ARGV`. | relevé après installation du module |
+
+### Lire la base sans Docker ni mot de passe
+
+Tant que `SUPABASE_DB_URL` n'était pas renseignée, aucun accès SQL n'était
+possible : `supabase db dump` lance `pg_dump` dans un conteneur, et Docker
+était absent. Contournement utilisé — une migration jetable qui `raise
+exception` : le message remonte dans la sortie de `db push`, la transaction
+est annulée, rien n'est écrit ni enregistré dans `schema_migrations`.
+
+C'est ce qui a permis de relever les extensions, les policies, les jobs cron
+et les triggers avant d'avoir la moindre connexion directe.
+
+---
+
 ## Ouvert — sécurité
 
 **Le canal de téléconsultation est public.** Les deux policies sur
@@ -82,7 +114,7 @@ ce qui est pire à diagnostiquer.
 | `..._rls.sql:69-82`, `:103-123` | **Le secrétariat n'a aucun accès réel.** La policy joint `medical.praticiens.cabinet_id` à un `profil_id` de secrétaire — le modèle n'a pas de lien secrétaire↔cabinet. Et les cinq policies de `rendez_vous` ne testent que patient et praticien. Le troisième rôle métier annoncé par le README est mort à la livraison. Correctif : `medical.profils.cabinet_id` + un helper `medical.cabinet_courant()`. |
 | `app/recherche/page.tsx:29` | La RPC `praticiens_a_proximite` est créée dans `public` mais appelée avec un client forcé sur `medical` → `Could not find the function medical.praticiens_a_proximite`. La page `/recherche` est cassée en permanence. |
 | `..._rls.sql:132-136` | `medical.mfa_verifiee()` échoue fermé : sans facteur TOTP enrôlé, le praticien voit une interface vide et un `42501` à l'écriture. À enrôler avant toute recette. |
-| `..._webhooks_et_files.sql:12-32` | Le schéma `supabase_functions` n'existe pas tant que les Database Webhooks ne sont pas activés dans le dashboard → le trigger `rdv_confirme_webhook` n'est jamais créé. `db push` émet un `WARNING` et continue. |
+| ~~`..._webhooks_et_files.sql:12-32`~~ | ~~Schéma `supabase_functions` absent~~ — **résolu** : module installé, trigger `rdv_confirme_webhook` posé et déclenché avec succès. |
 | `..._storage_avance.sql:14-25` | `medical.televersements` est une table maison que rien n'alimente : le protocole TUS ne l'écrit jamais. `url_tus` reste `NULL`, les lignes s'accumulent en « en cours ». |
 | `..._storage_avance.sql:9-12` | Bucket `imagerie` déclaré à 5 Gio. `storage.buckets.file_size_limit` est un `bigint` sans contrainte, l'insert passe — mais la limite globale du projet plafonne, et l'upload réel rend `413 Payload too large`. |
 | `..._storage_avance.sql:37` vs `:56` | Le suivi de téléversement accepte un dépôt patient que la policy Storage refuse ensuite : ligne de suivi orpheline. |

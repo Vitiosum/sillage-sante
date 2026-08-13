@@ -34,7 +34,7 @@ utile pour la démo, pas un défaut à corriger.
 | Étape | Commande | État |
 |---|---|---|
 | Liaison | `supabase link --project-ref hdhmnoliwhsqiuawqrnp` | fait |
-| 12 migrations | `supabase db push --include-all` | fait, aucune erreur |
+| Migrations | `supabase db push --include-all` | fait — **16/16**, dont 4 correctifs datés du 13 août |
 | Config projet | `NEXT_PUBLIC_SITE_URL=http://localhost:3000 supabase config push` | fait — api, db, auth, storage `up_to_date` |
 | 5 Edge Functions | `supabase functions deploy` | fait, les 5 `ACTIVE` |
 | Secrets fonctions | `supabase secrets set --env-file …` | fait — 3 poussés |
@@ -203,29 +203,31 @@ instruits, recroisés avec l'état réel de la base. C'est la matière brute du 
 de migration, et la preuve que sur cette surface rien ne se déduit : tout se
 relève.
 
-## Cartographie Supabase → Clever Cloud (hypothèse de travail)
+## Cartographie Supabase → Clever Cloud
 
-À valider composant par composant pendant le POC — rien ici n'est acquis avant
-vérification sur la plateforme.
+La colonne « source » n'est plus une hypothèse : elle est relevée sur le projet
+déployé. La colonne « cible » reste à valider composant par composant.
 
-| Brique Supabase | Cible Clever Cloud envisagée | Statut |
-|---|---|---|
-| PostgreSQL | Add-on PostgreSQL | natif |
-| Extensions (`postgis`, `vector`, `pg_cron`, `pg_net`, `pgsodium`, `pgmq`, `pgjwt`, `supabase_vault`) | Add-on PostgreSQL | **à vérifier une par une** — c'est le point de bascule du plan |
-| PostgREST | Application Docker | à déployer |
-| GoTrue (auth, MFA, OIDC, anonyme) | Add-on Keycloak, ou GoTrue en Docker | arbitrage à poser |
-| Storage API + buckets | Cellar (S3-compatible) | natif, mais l'API Storage Supabase est une surcouche |
-| Transformation d'image (`transform`) | imgproxy en application Docker | conteneur supplémentaire |
-| Upload reprenable TUS | à valider derrière le load balancer Clever Cloud | à tester |
-| Realtime (postgres_changes, broadcast, presence) | Application Docker dédiée | poste le plus coûteux |
-| Edge Functions (Deno) | Applications Clever Cloud (Docker/Node) | 1 app, ou 5 endpoints d'une app |
-| `pg_cron` (4 jobs) | Cron Clever Cloud (`clevercloud/cron.json`) | **sortir la logique de la base** — plus simple et plus lisible |
-| `pg_net` (appel sortant en trigger) | Appel HTTP applicatif | même logique : sortir de la base |
-| `supabase_vault` (3 secrets) | Variables d'environnement Clever Cloud | natif, `clever env set` |
-| `pgmq` (3 files) | Add-on Pulsar, ou `pgmq` conservé en base | arbitrage à poser |
-| Database Webhooks (`supabase_functions.http_request`) | Surcouche dashboard, pas de PostgreSQL standard | à réécrire côté application |
-| `pg_graphql` | Aucune cible — activé mais jamais appelé dans le code | **à ne pas porter**, et à dire |
-| Clés `anon` / `service_role` / `SUPABASE_JWT_SECRET` | Variables d'environnement + JWT à régénérer de façon cohérente | à reprendre en entier |
+| Brique | Source, mesurée | Cible Clever Cloud envisagée | Statut |
+|---|---|---|---|
+| PostgreSQL | 17.6, 16 tables, 55 policies | Add-on PostgreSQL | natif |
+| Extensions | 16 installées : `postgis` 3.3.7, `vector` 0.8.2, `pgmq` 1.5.1, `pg_cron` 1.6.4, `pg_net` 0.20.4, `supabase_vault` 0.3.1, `pgsodium` 3.1.8, `pgjwt` 0.2.0… | Add-on PostgreSQL | **à vérifier une par une** — point de bascule du plan |
+| Chiffrement TCE du NIR | `SECURITY LABEL FOR pgsodium ON COLUMN medical.patients.nir_chiffre` | aucune cible directe | **arbitrage n°1** : chiffrement applicatif (`lib/chiffrement.ts`) |
+| Rôles | `postgres` porte **BYPASSRLS** ; `authenticated`/`anon`/`service_role` cités 141 fois ; `supabase_admin` 15 fois | à recréer, `authenticator` doit les endosser | **à ne pas sous-estimer** — 2 tables sont en `force row level security` |
+| PostgREST | schémas exposés : `public`, `graphql_public`, `medical` | Application Docker | à déployer |
+| GoTrue | hook `custom_access_token`, MFA TOTP, auth anonyme, liaison d'identités, OIDC Pro Santé Connect | Add-on Keycloak, ou GoTrue en Docker | arbitrage à poser |
+| Storage | 4 buckets — `avatars` 2 Mio, `documents-medicaux` 50 Mio, `ordonnances` 5 Mio, `imagerie` 5 Gio | Cellar (S3-compatible) | natif, mais l'API Storage est une surcouche |
+| Transformation d'image | `getPublicUrl(..., { transform })` | imgproxy en application Docker | conteneur supplémentaire |
+| Upload reprenable TUS | segments de 6 Mio imposés | à valider derrière le load balancer | à tester |
+| Realtime | 3 tables publiées, `replica identity full`, policies sur `realtime.messages` | Application Docker dédiée | poste le plus coûteux |
+| Edge Functions | 5 fonctions Deno, 3 secrets | Applications Clever Cloud (Docker/Node) | 1 app, ou 5 endpoints d'une app |
+| `pg_cron` | **5 jobs**, tous actifs | Cron Clever Cloud (`clevercloud/cron.json`) | **sortir la logique de la base** |
+| `pg_net` | appel sortant en trigger ; réponses dans `net._http_response` | Appel HTTP applicatif | même logique : sortir de la base |
+| `supabase_vault` | 3 secrets, dont `service_role_key` lu par les jobs cron | Variables d'environnement | natif, `clever env set` |
+| `pgmq` | 3 files, trigger d'empilement | Add-on Pulsar, ou `pgmq` conservé en base | arbitrage à poser |
+| Database Webhooks | schéma `supabase_functions`, fonction trigger `http_request()` sans argument déclaré (TG_ARGV), rôle `supabase_functions_admin` | surcouche maison à `pg_net` | à réécrire côté application |
+| `pg_graphql` | 1.6.1, activée, **aucun appel dans le code** | aucune cible | **à ne pas porter**, et à le dire |
+| Clés | `anon` publishable, `service_role` secret, JWT secret | Variables d'environnement, JWT à régénérer de façon cohérente | à reprendre en entier |
 
 Option à considérer face à l'empilement de conteneurs (PostgREST + GoTrue +
 Realtime + imgproxy) : **Kubernetes Clever Cloud** pour héberger la stack de
