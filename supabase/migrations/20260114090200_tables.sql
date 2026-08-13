@@ -54,9 +54,22 @@ create table medical.patients (
   maj_a              timestamptz not null default now()
 );
 
-security label for pgsodium
-  on column medical.patients.nir_chiffre
-  is 'ENCRYPT WITH KEY COLUMN nir_key_id SECURITY INVOKER';
+-- Chiffrement de colonne (TCE) : depend de pgsodium, deprecie par Supabase.
+-- Si l'extension est absente, la colonne reste en clair et le chiffrement est
+-- assure cote applicatif (lib/chiffrement.ts).
+do $$
+begin
+  if exists (select 1 from pg_extension where extname = 'pgsodium') then
+    execute $sl$
+      security label for pgsodium
+        on column medical.patients.nir_chiffre
+        is 'ENCRYPT WITH KEY COLUMN nir_key_id SECURITY INVOKER'
+    $sl$;
+  else
+    raise warning 'pgsodium absent : medical.patients.nir_chiffre n''est pas chiffree par TCE.';
+  end if;
+end
+$$;
 
 -- --- Prise en charge : la table qui pilote toutes les policies RLS ----------
 create table medical.prises_en_charge (
@@ -110,7 +123,7 @@ create table medical.consultations (
   maj_a          timestamptz not null default now()
 );
 
-create index on medical.consultations
+create index consultations_embedding_idx on medical.consultations
   using ivfflat (embedding extensions.vector_cosine_ops) with (lists = 100);
 create index on medical.consultations
   using gin (to_tsvector('french', coalesce(compte_rendu, '')));

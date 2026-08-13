@@ -1,5 +1,7 @@
 # Sillage Santé
 
+> Déploiement pas à pas : voir [DEPLOIEMENT.md](DEPLOIEMENT.md)
+
 Plateforme de téléconsultation et de suivi de dossiers patients, construite sur
 **Supabase Cloud**. Next.js 14 (App Router) côté front, PostgREST appelé
 directement depuis le navigateur, aucun backend intermédiaire.
