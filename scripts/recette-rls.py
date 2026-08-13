@@ -47,23 +47,42 @@ RESSOURCES = [
     ("public", "mon_agenda"),
 ]
 
-# Ce que le README annonce. 'None' = pas d'attendu ferme, on observe.
-# cle : (ressource, identite) -> nombre de lignes attendu
+# Attendus exprimes en ISOLATION, pas en valeurs absolues : le corpus varie
+# selon qu'on a charge le volume ou non, mais les regles d'acces, elles, ne
+# changent pas. C'est ce qui rend ce harnais rejouable tel quel sur la cible.
+#
+#   0        -> la ressource doit etre invisible
+#   ">0"     -> au moins une ligne doit etre visible
+#   "=anon"  -> doit voir exactement ce que voit un anonyme (aucun privilege)
 ATTENDU = {
-    ("rendez_vous", "praticien"): 3,
-    ("rendez_vous", "patient"): 3,
-    ("consultations", "praticien"): 1,
-    ("patients", "praticien"): 1,
-    # Le README annonce un role secretariat qui voit l'agenda et l'identite
-    # des patients du cabinet, mais jamais le contenu medical.
-    ("rendez_vous", "secretariat"): 3,
-    ("patients", "secretariat"): 1,
-    ("consultations", "secretariat"): 0,
-    # anon ne doit jamais rien voir.
-    ("rendez_vous", "anon"): 0,
+    # anon : rien du dossier medical. Trois tables sont volontairement
+    # publiques (annuaire), elles ne figurent pas ici.
     ("patients", "anon"): 0,
+    ("prises_en_charge", "anon"): 0,
+    ("rendez_vous", "anon"): 0,
     ("consultations", "anon"): 0,
+    ("documents", "anon"): 0,
+    ("messages", "anon"): 0,
+    # patient : son propre dossier.
+    ("patients", "patient"): ">0",
+    ("rendez_vous", "patient"): ">0",
+    ("consultations", "patient"): ">0",
+    # praticien en aal2 : les patients qu'il prend en charge.
+    ("patients", "praticien"): ">0",
+    ("rendez_vous", "praticien"): ">0",
+    ("consultations", "praticien"): ">0",
+    # Le README annonce un secretariat qui voit l'agenda et l'identite des
+    # patients du cabinet, mais jamais le contenu medical.
+    ("rendez_vous", "secretariat"): ">0",
+    ("patients", "secretariat"): ">0",
+    ("consultations", "secretariat"): 0,
 }
+
+
+def conforme(obtenu, attendu):
+    if attendu == ">0":
+        return isinstance(obtenu, int) and obtenu > 0
+    return obtenu == attendu
 
 
 def lire_env():
@@ -77,15 +96,26 @@ def lire_env():
 
 
 def interroger(base, anon, jeton, schema, table):
-    """Renvoie un nombre de lignes, ou 'ERR <code>' / 'HTTP <code>'."""
-    url = f"{base}/rest/v1/{table}?select=*&limit=1000"
+    """Renvoie le nombre EXACT de lignes visibles, ou 'ERR <code>'.
+
+    On demande `count=exact` avec une plage vide plutot que de compter les
+    lignes ramenees : sans ca, toute table depassant la limite renverrait le
+    plafond et non la verite. C'est ce qui faisait afficher 1000 rendez-vous
+    la ou il y en a 20 003.
+    """
+    url = f"{base}/rest/v1/{table}?select=*"
     req = urllib.request.Request(url)
     req.add_header("apikey", anon)
     req.add_header("Authorization", f"Bearer {jeton}")
     req.add_header("Accept-Profile", schema)
+    req.add_header("Prefer", "count=exact")
+    req.add_header("Range-Unit", "items")
+    req.add_header("Range", "0-0")
     try:
-        with urllib.request.urlopen(req, timeout=30) as r:
-            return len(json.loads(r.read() or b"[]"))
+        with urllib.request.urlopen(req, timeout=60) as r:
+            plage = r.headers.get("Content-Range", "")
+            total = plage.split("/")[-1] if "/" in plage else ""
+            return int(total) if total.isdigit() else len(json.loads(r.read() or b"[]"))
     except urllib.error.HTTPError as e:
         try:
             d = json.loads(e.read() or b"{}")
@@ -106,6 +136,42 @@ def claim(jeton, nom):
         return "-"
 
 
+def rafraichir(base, anon, sessions):
+    """Renouvelle les jetons expires.
+
+    jwt_expiry vaut 3600 s : un harnais de recette rejoue des mois plus tard
+    tomberait sinon en PGRST303 sur toutes les lignes, ce qui ressemble a une
+    regression alors que ce n'est qu'un jeton perime. Le refresh preserve le
+    niveau aal, donc le praticien reste en aal2 sans repasser par le TOTP.
+    """
+    import time
+    change = False
+    for email, s in sessions.items():
+        exp = claim(s["access_token"], "exp")
+        if isinstance(exp, int) and exp > time.time() + 60:
+            continue
+        if not s.get("refresh_token"):
+            print(f"  {email} : jeton expire et pas de refresh_token — relancer ./scripts/sessions-mfa.py")
+            continue
+        req = urllib.request.Request(
+            f"{base}/auth/v1/token?grant_type=refresh_token",
+            data=json.dumps({"refresh_token": s["refresh_token"]}).encode(), method="POST")
+        req.add_header("apikey", anon)
+        req.add_header("Content-Type", "application/json")
+        try:
+            with urllib.request.urlopen(req, timeout=30) as r:
+                d = json.loads(r.read())
+            s["access_token"] = d["access_token"]
+            s["refresh_token"] = d.get("refresh_token", s["refresh_token"])
+            change = True
+            print(f"  {email:28} jeton renouvele (aal={claim(s['access_token'], 'aal')})")
+        except urllib.error.HTTPError as e:
+            print(f"  {email} : refresh refuse ({e.code}) — relancer ./scripts/sessions-mfa.py")
+    if change:
+        SESSIONS.write_text(json.dumps(sessions, indent=1))
+    return sessions
+
+
 def main():
     if not SESSIONS.exists():
         raise SystemExit("Absent : .sessions.local.json — lancer d'abord ./scripts/sessions-mfa.py")
@@ -114,6 +180,7 @@ def main():
     base = env["NEXT_PUBLIC_SUPABASE_URL"].rstrip("/")
     anon = env["NEXT_PUBLIC_SUPABASE_ANON_KEY"]
     sessions = json.loads(SESSIONS.read_text())
+    sessions = rafraichir(base, anon, sessions)
 
     identites = [("anon", anon)]
     for email, s in sessions.items():
@@ -147,7 +214,7 @@ def main():
     ecarts = 0
     for (table, ident), attendu in sorted(ATTENDU.items()):
         obtenu = resultats.get((table, ident), "absent")
-        if obtenu != attendu:
+        if not conforme(obtenu, attendu):
             ecarts += 1
             print(f"  {table}.{ident:14} attendu={attendu}  obtenu={obtenu}")
     if ecarts == 0:

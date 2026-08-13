@@ -151,6 +151,31 @@ Prérequis : `scripts/sessions-mfa.py`, qui ouvre de vraies sessions via
 et enrôle un facteur TOTP pour atteindre `aal2`, sans quoi
 `medical.mfa_verifiee()` verrouille tout le parcours praticien.
 
+Deux choix de conception le rendent rejouable des mois plus tard :
+
+- **il renouvelle les jetons expirés** avant d'interroger. `jwt_expiry` vaut
+  1 h ; sans ça, toute la matrice tomberait en `PGRST303` et ressemblerait à
+  une régression massive alors que le jeton est simplement périmé ;
+- **les attendus sont exprimés en isolation** (`0`, `>0`), pas en valeurs
+  absolues. Le corpus varie selon qu'on a chargé le volume ou non, les règles
+  d'accès non. C'est ce qui permet de comparer source et cible sans réécrire
+  le test.
+
+Il utilise `Prefer: count=exact` : compter les lignes ramenées afficherait le
+plafond de pagination, pas la vérité — c'est ce qui faisait lire « 1000
+rendez-vous » là où il y en a 20 003.
+
+### Une asymétrie du modèle, visible seulement sous charge
+
+Le praticien voit **20 003 rendez-vous mais une seule consultation**. Ce n'est
+pas un bug : la policy des rendez-vous s'appuie sur `praticien_id` seul, celle
+des consultations exige en plus `a_une_prise_en_charge(patient_id)`. Les 500
+patients de volume n'ont pas de prise en charge.
+
+Conséquence pour la cible : l'agenda fuit plus largement que le dossier
+médical. À vérifier après migration — c'est typiquement le genre d'écart
+qu'une reprise « fidèle » peut introduire sans que personne ne le voie.
+
 ### Lire la base sans Docker ni mot de passe
 
 Tant que `SUPABASE_DB_URL` n'était pas renseignée, aucun accès SQL n'était
