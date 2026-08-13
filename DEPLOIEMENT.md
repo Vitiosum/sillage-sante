@@ -2,6 +2,10 @@
 
 Compter 30 à 45 minutes la première fois. Le plan gratuit suffit.
 
+> **Procédure vérifiée le 13 août 2026** contre la CLI 2.114.0 et un projet
+> Cloud neuf en PostgreSQL 17. Les écarts constatés à l'exécution sont corrigés
+> ci-dessous ; le récapitulatif est dans [CLAUDE.md](CLAUDE.md).
+
 ## 1. Créer le projet
 
 <https://supabase.com/dashboard> → **New project**.
@@ -58,8 +62,14 @@ concernées échoueront proprement, le reste fonctionne.
 
 ## 4. Installer la CLI et se connecter
 
+`npm install -g supabase` n'est plus supporté : le paquet npm refuse
+l'installation globale. Passer par Homebrew.
+
 ```bash
-npm install -g supabase
+brew install supabase/tap/supabase
+```
+
+```bash
 supabase login          # ouvre le navigateur
 ```
 
@@ -84,14 +94,46 @@ s'arrêtent pas — lis-les, elles disent exactement ce qui n'a pas été instal
 
 ## 6. Post-déploiement
 
-**SQL Editor** → `scripts/post-deploiement.sql`, en remplaçant `<PROJECT_REF>`
-et `<SERVICE_ROLE_KEY>`. Ça branche le job `pg_cron` sur l'Edge Function de
-rappel et pointe le trigger antivirus vers `document-scan`.
+**N'édite pas `scripts/post-deploiement.sql`** — il est suivi par git et le
+dépôt est public. Y coller la clé `service_role`, qui contourne toutes les
+policies RLS, la publierait au commit suivant.
 
-Puis **Authentication → Hooks** → activer *Custom Access Token* et sélectionner
-`auth_hooks.custom_access_token`. Sans ça, les claims `role_metier`,
-`praticien_id` et `patient_id` sont absents du JWT et la moitié des policies RLS
-renvoie zéro ligne.
+```bash
+./scripts/post-deploiement.sh <project-ref>
+```
+
+Le script lit `SUPABASE_SERVICE_ROLE_KEY` dans `.env.local` et génère
+`scripts/post-deploiement.local.sql` (ignoré par git, permissions 600). Colle
+**ce fichier-là** dans le SQL Editor, puis supprime-le. Ça branche le job
+`pg_cron` sur l'Edge Function de rappel et pointe le trigger antivirus vers
+`document-scan`.
+
+### Le hook Custom Access Token n'est plus une étape manuelle
+
+La procédure demandait d'aller dans **Authentication → Hooks**. Ce n'est plus
+nécessaire : `supabase config push` applique `[auth.hook.custom_access_token]`
+déclaré dans `config.toml`, ainsi que l'auth anonyme, la liaison manuelle
+d'identités et la MFA.
+
+```bash
+NEXT_PUBLIC_SITE_URL=http://localhost:3000 supabase config push
+```
+
+La variable doit être exportée : **la CLI ne résout pas les `env()` absents**,
+elle pousse la chaîne `"env(NEXT_PUBLIC_SITE_URL)"` telle quelle.
+
+Le bloc `[auth]` part en un seul appel API — une seule sous-section invalide
+fait échouer tout le reste, hook compris. Trois d'entre elles sont donc
+neutralisées dans `config.toml`, avec la raison en commentaire :
+
+| Section | Pourquoi |
+|---|---|
+| `[auth.email.template.*]` | le plan gratuit refuse toute modification de gabarit sans SMTP custom (`400`) |
+| `[auth.email.smtp]` | `SMTP_USER` / `SMTP_PASS` non renseignés → poussés littéralement |
+| `[auth.external.keycloak]`, `[auth.external.google]` | idem, pas de credentials OIDC sur ce déploiement |
+
+Sans le hook, les claims `role_metier`, `praticien_id` et `patient_id` sont
+absents du JWT et la moitié des policies RLS renvoie zéro ligne.
 
 Doc : <https://supabase.com/docs/guides/auth/auth-hooks>
 
@@ -143,6 +185,17 @@ supabase db dump -f dump_schema.sql
 supabase db dump -f dump_data.sql --data-only
 supabase db dump -f dump_auth.sql --schema auth,storage
 ```
+
+**`supabase db dump` exige Docker** : la CLI lance `pg_dump` dans un conteneur,
+même contre une base distante. Sans Docker Desktop, utiliser `pg_dump` en natif
+avec la chaîne de connexion (`SUPABASE_DB_URL` de `.env.local`) :
+
+```bash
+pg_dump "$SUPABASE_DB_URL" --schema-only --schema=medical,audit,auth_hooks -f dump_schema.sql
+```
+
+Les trois fichiers sont couverts par `.gitignore` (`dump_*.sql`) : ils
+contiennent des données et les secrets du Vault.
 
 Ces trois fichiers sont la matière réelle du plan de migration : c'est là qu'on
 voit ce qui se restaure tel quel sur un PostgreSQL managé et ce qui coince.

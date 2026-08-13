@@ -15,17 +15,77 @@ tourne**. Time-to-demo court, architecture lisible.
 
 ## Les deux phases
 
-### Phase 1 — Faire vivre la source (Supabase Cloud)
+### Phase 1 — Faire vivre la source (Supabase Cloud) — **en cours**
 
 Objectif : un système réellement déployé, avec des données, pour produire les
 dumps qui serviront de matière à la migration. Procédure complète dans
 [DEPLOIEMENT.md](DEPLOIEMENT.md).
 
-```bash
-supabase link --project-ref <ref>
-supabase db push
-./scripts/deployer.sh <ref>
-```
+**Projet de démo** : `hdhmnoliwhsqiuawqrnp`, région `eu-west-1` (Irlande),
+PostgreSQL 17.6, plan gratuit.
+[Dashboard](https://supabase.com/dashboard/project/hdhmnoliwhsqiuawqrnp)
+
+La région n'est pas `eu-west-3` comme le suggère DEPLOIEMENT.md. On la garde :
+« la source est en Irlande, la cible Clever Cloud sera en France » est un angle
+utile pour la démo, pas un défaut à corriger.
+
+#### Ce qui est déployé
+
+| Étape | Commande | État |
+|---|---|---|
+| Liaison | `supabase link --project-ref hdhmnoliwhsqiuawqrnp` | fait |
+| 12 migrations | `supabase db push --include-all` | fait, aucune erreur |
+| Config projet | `NEXT_PUBLIC_SITE_URL=http://localhost:3000 supabase config push` | fait — api, db, auth, storage `up_to_date` |
+| 5 Edge Functions | `supabase functions deploy` | fait, les 5 `ACTIVE` |
+| Secrets fonctions | `supabase secrets set --env-file …` | **à faire** — dépend de `.env.local` |
+| `post-deploiement.sql` | `./scripts/post-deploiement.sh <ref>` | **à faire** — dépend de `.env.local` |
+| Comptes de test | SQL Editor, étape 7 de DEPLOIEMENT.md | **à faire** |
+
+Vérifié en base : 16 tables (15 `medical` + 1 `audit`).
+`medical.consultations` porte 1,6 Mo d'index sur une table vide — c'est
+l'index `ivfflat`, donc `vector` est bien actif.
+
+#### Ce que l'exécution réelle a corrigé dans la procédure
+
+Sept écarts entre DEPLOIEMENT.md et ce qui se passe vraiment. Ils sont corrigés
+dans le dépôt, et ils comptent : ce sont des frictions que la migration
+retrouvera.
+
+1. **`templates/` était absent du dépôt.** `config.toml` référençait
+   `templates/magic_link.html` et `templates/invite.html` : *toute* commande CLI
+   échouait au chargement de la config (`LegacyDbConfigLoadError`). Les deux
+   gabarits ont été écrits.
+2. **`npm install -g supabase` n'est plus supporté.** Passer par
+   `brew install supabase/tap/supabase`.
+3. **`--include-all` est nécessaire.** Les migrations sont horodatées en
+   janvier ; un projet créé plus tard les ignore sans ce flag.
+4. **`prerequis.sql` n'est pas indispensable.** PostGIS et pgmq sont créés par
+   leurs propres migrations (`..._geolocalisation.sql:11`,
+   `..._webhooks_et_files.sql:40`), et le reste est dans des blocs tolérants.
+   Il reste recommandé pour les GRANTs de `pg_cron`.
+5. **`supabase config push` remplace l'activation manuelle du hook.** L'étape
+   « Authentication → Hooks » de DEPLOIEMENT.md n'est plus nécessaire : la CLI
+   applique `[auth.hook.custom_access_token]`. Elle applique aussi l'auth
+   anonyme, la liaison manuelle d'identités et la MFA.
+6. **Le bloc `[auth]` est poussé en un seul appel.** Trois sections le
+   faisaient échouer en entier, hook compris :
+   - les gabarits d'e-mail — le plan gratuit les refuse sans SMTP custom
+     (`400 Email template modification is not available for free tier`) ;
+   - `[auth.email.smtp]` et les providers OIDC — la CLI **ne résout pas** les
+     `env()` absents, elle pousse la chaîne `"env(SMTP_USER)"` littéralement.
+   Les trois sont commentés ou désactivés dans `config.toml`, avec la raison.
+7. **`--no-verify-jwt` est du bruit en CLI 2.x.** Après `supabase functions
+   deploy` sans aucun flag, `functions list` renvoie exactement les
+   `verify_jwt` de `config.toml`. C'est la config qui fait foi.
+
+#### Ce qui n'est pas scriptable depuis cette machine
+
+- **`supabase db dump` exige Docker**, absent ici. `pg_dump` et `psql` natifs
+  sont disponibles mais réclament le mot de passe de la base. Les trois dumps
+  de la phase 2 passent donc par un `SUPABASE_DB_URL` renseigné dans
+  `.env.local`, ou par l'installation de Docker Desktop.
+- **Les clés d'API du projet** (`anon`, `service_role`) : à récupérer dans
+  Project Settings → API et à coller dans `.env.local`.
 
 Puis, une fois deux ou trois consultations saisies :
 
@@ -96,6 +156,24 @@ traiter dans le plan de migration et dans la cible Clever Cloud, pas à les
 retirer de la source.
 
 Aucune donnée réelle, aucun secret valide. `.env.local` n'est jamais versionné.
+
+### Une exception : le dépôt est public
+
+`scripts/post-deploiement.sql` demandait de remplacer `<SERVICE_ROLE_KEY>`
+**dans le fichier suivi par git**, alors que le workflow documenté est
+`git add .`. Sur un dépôt public, c'est une fuite de clé au commit suivant —
+et `service_role` contourne toutes les policies RLS.
+
+Corrigé : le `.sql` porte un avertissement et ne doit plus être édité. Passer
+par `./scripts/post-deploiement.sh <project-ref>`, qui lit la clé dans
+`.env.local` et génère `post-deploiement.local.sql` (ignoré par git, en 600).
+
+`.gitignore` couvre désormais `*.local.sql`, `dump_*.sql` et `.env.*.local`.
+**Avant tout commit, vérifier :**
+
+```bash
+git ls-files | grep -Ei 'env|dump|local\.sql'
+```
 
 ## Commandes
 

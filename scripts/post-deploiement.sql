@@ -1,6 +1,14 @@
 -- ---------------------------------------------------------------------------
 -- A executer APRES `supabase db push` et `supabase functions deploy`.
--- Remplacer <PROJECT_REF> et <SERVICE_ROLE_KEY> avant de lancer.
+--
+-- NE MODIFIE PAS CE FICHIER. Il est suivi par git et le depot est public :
+-- y coller la cle service_role la publie au commit suivant.
+--
+-- Lancer a la place :
+--     ./scripts/post-deploiement.sh <project-ref>
+--
+-- Il produit post-deploiement.local.sql (ignore par git) avec les valeurs
+-- substituees, a coller dans le SQL Editor puis a supprimer.
 -- ---------------------------------------------------------------------------
 
 -- 1. Stocker la cle service_role dans le Vault (utilisee par pg_cron)

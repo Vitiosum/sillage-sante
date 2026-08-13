@@ -2,6 +2,16 @@ node_modules/
 .next/
 .env
 .env.local
+.env.*.local
 supabase/.temp/
 supabase/.branches/
 *.dump
+
+# Dumps de la base source : contiennent des donnees et des secrets Vault.
+# Le depot est public, ils ne doivent jamais y entrer.
+dump_*.sql
+*.dump.sql
+
+# Genere par scripts/post-deploiement.sh : contient la cle service_role en clair.
+*.local.sql
+.env.secrets.tmp
