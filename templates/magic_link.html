@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="fr">
+  <body style="margin:0;padding:24px;background:#f5f7fa;font-family:system-ui,-apple-system,'Segoe UI',sans-serif;color:#1b2430">
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:520px;margin:0 auto;background:#ffffff;border-radius:12px;padding:32px">
+      <tr>
+        <td>
+          <h1 style="margin:0 0 16px;font-size:20px;font-weight:600">Sillage Santé</h1>
+          <p style="margin:0 0 16px;font-size:15px;line-height:1.6">
+            Voici votre lien de connexion. Il est valable 10&nbsp;minutes et ne peut
+            servir qu'une seule fois.
+          </p>
+          <p style="margin:0 0 24px">
+            <a href="{{ .ConfirmationURL }}"
+               style="display:inline-block;padding:12px 20px;background:#1b5e8c;color:#ffffff;text-decoration:none;border-radius:8px;font-size:15px;font-weight:500">
+              Se connecter
+            </a>
+          </p>
+          <p style="margin:0 0 8px;font-size:13px;color:#5a6672">
+            Si le bouton ne fonctionne pas, copiez ce code&nbsp;: <strong>{{ .Token }}</strong>
+          </p>
+          <p style="margin:0;font-size:13px;color:#5a6672">
+            Vous n'êtes pas à l'origine de cette demande&nbsp;? Ignorez ce message.
+          </p>
+        </td>
+      </tr>
+    </table>
+  </body>
+</html>
