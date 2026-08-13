@@ -38,7 +38,13 @@ echo "==> 3/5  Envoi des secrets des Edge Functions"
 # Les variables prefixees SUPABASE_ ne sont pas acceptees comme secrets de
 # fonction : elles sont deja injectees dans le runtime. Les envoyer produit
 # un rejet silencieux, on les filtre donc explicitement.
-grep -vE '^\s*(#|$)|^SUPABASE_|^NEXT_PUBLIC_' .env.local > .env.secrets.tmp
+# Les variables vides sont ecartees aussi : les pousser n'apporte rien et
+# masque ce qui est reellement configure.
+umask 077
+grep -vE '^\s*(#|$)|^SUPABASE_|^NEXT_PUBLIC_|^[A-Za-z_][A-Za-z0-9_]*=\s*$' \
+  .env.local > .env.secrets.tmp
+echo "Variables poussees :"
+cut -d= -f1 .env.secrets.tmp
 supabase secrets set --env-file .env.secrets.tmp
 rm -f .env.secrets.tmp
 
