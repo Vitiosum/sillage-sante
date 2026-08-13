@@ -6,11 +6,19 @@
 #
 # Lit SUPABASE_SERVICE_ROLE_KEY et NEXT_PUBLIC_SUPABASE_URL dans .env.local.
 #
-# Les comptes ne sont PAS crees en SQL : le trigger medical.gerer_nouvel_
-# utilisateur() se declenche sur insert dans auth.users et lit
-# raw_app_meta_data ->> 'role_metier'. C'est donc app_metadata au moment de la
-# creation qui determine le role metier — le modifier ensuite ne rejoue pas le
-# trigger et ne cree pas la fiche correspondante.
+# Les comptes ne sont PAS crees en SQL : c'est GoTrue qui doit les creer,
+# pour que medical.gerer_nouvel_utilisateur() alimente profils et patients.
+#
+# ATTENTION — passer app_metadata ici ne suffit PAS a poser le role metier.
+# L'API Admin insere la ligne dans auth.users puis met a jour
+# raw_app_meta_data dans un second temps : le trigger AFTER INSERT s'execute
+# avant, lit NULL, et retombe sur 'patient'. Sans erreur ni avertissement.
+# Le trigger n'etant pas rejoue sur UPDATE, rien ne se repare tout seul.
+#
+# La reparation est faite par l'etape 0 de scripts/donnees-demo.sql, qui
+# resynchronise medical.profils.role_metier depuis auth.users. Ne pas sauter
+# cette etape, sinon le praticien et la secretaire restent des patients et
+# la moitie des policies RLS renvoie vide.
 #
 # Aucun mot de passe : les comptes sont en email_confirm, connexion par
 # magic link. Rien a stocker, rien a faire tourner.

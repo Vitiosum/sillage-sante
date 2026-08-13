@@ -15,3 +15,6 @@ dump_*.sql
 # Genere par scripts/post-deploiement.sh : contient la cle service_role en clair.
 *.local.sql
 .env.secrets.tmp
+
+# Jetons de session generes par scripts/sessions-mfa.py
+.sessions.local.json

@@ -18,6 +18,38 @@
 -- ---------------------------------------------------------------------------
 begin;
 
+-- 0. REPARER LE ROLE METIER. Indispensable, et contre-intuitif.
+--
+-- medical.gerer_nouvel_utilisateur() est un trigger AFTER INSERT sur
+-- auth.users qui lit new.raw_app_meta_data ->> 'role_metier'. Or l'API Admin
+-- de GoTrue insere d'abord la ligne, puis met a jour raw_app_meta_data dans
+-- un second temps : au moment ou le trigger s'execute, la cle n'existe pas
+-- encore. Il lit NULL et retombe sur le defaut 'patient'.
+--
+-- Constate : les trois comptes ressortent avec role_metier='patient' dans
+-- medical.profils alors qu'auth.users porte bien 'praticien' et
+-- 'secretariat'. Aucune erreur, aucun avertissement.
+--
+-- Le trigger n'est pas rejoue sur UPDATE : modifier app_metadata ensuite,
+-- comme le suggere l'etape 7 de DEPLOIEMENT.md, ne repare rien.
+--
+-- On ne corrige pas le trigger : il fait partie du corpus de test. On repare
+-- l'etat, ce que ferait un operateur en production.
+update medical.profils p
+   set role_metier = (u.raw_app_meta_data ->> 'role_metier')::medical.role_metier
+  from auth.users u
+ where u.id = p.id
+   and u.raw_app_meta_data ->> 'role_metier' is not null
+   and p.role_metier is distinct from (u.raw_app_meta_data ->> 'role_metier')::medical.role_metier;
+
+-- Le trigger a aussi cree une fiche medical.patients pour tout le monde,
+-- puisqu'il les croyait tous patients. On retire celles qui n'ont pas lieu
+-- d'etre — sans quoi le praticien apparait dans sa propre patientele.
+delete from medical.patients pa
+ using medical.profils p
+ where p.id = pa.profil_id
+   and p.role_metier <> 'patient';
+
 -- 1. Fiche praticien (le trigger ne cree que profils pour ce role)
 insert into medical.praticiens (profil_id, cabinet_id, rpps, specialite, actif)
 select u.id, c.id, '10001234567', 'Medecine generale', true
