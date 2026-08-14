@@ -230,33 +230,95 @@ relève.
 
 ## Cartographie Supabase → Clever Cloud
 
-La colonne « source » n'est plus une hypothèse : elle est relevée sur le projet
-déployé. La colonne « cible » reste à valider composant par composant.
+La colonne « source » est relevée sur le projet déployé. La colonne « cible »
+est désormais adossée à la documentation Clever Cloud, vérifiée en août 2026 —
+192 faits collectés, **116 confirmés après réfutation adverse**. Détail et
+sources : `~/.claude/skills/migration-supabase-clever/references/clever-cloud.md`.
+
+### Le constat qui tranche avant tous les arbitrages
+
+**L'add-on PostgreSQL managé n'autorise ni superuser, ni création de rôles, ni
+réplication logique.** La documentation liste explicitement comme impossibles
+l'administration d'utilisateurs, la mise à jour de la configuration serveur et
+la création de réplicas.
+
+Or cette application exige des rôles dédiés : `authenticator` + `anon` +
+`authenticated` + `service_role` pour PostgREST, `supabase_auth_admin` pour
+GoTrue, `supabase_storage_admin` pour Storage, un rôle `REPLICATION` pour
+Realtime. **La stack Supabase ne peut donc pas être redéployée telle quelle sur
+l'add-on managé.**
+
+Trois voies, par ordre de préférence :
+
+1. **On ne migre pas Supabase, on migre l'application.** Un backend classique
+   remplace PostgREST + GoTrue + Realtime et parle directement à l'add-on. Trois
+   conteneurs disparaissent. C'est la réponse la plus simple, la plus native, et
+   la moins coûteuse à exploiter — **c'est la recommandation par défaut**.
+2. **PostgreSQL sur CKE** si la stack doit être conservée à l'identique : on
+   récupère le contrôle complet, on perd le managé.
+3. **Add-on dédié + tickets support**, à qualifier. Ne rien promettre sans
+   réponse écrite.
+
+### Extensions : ce qui existe et ce qui n'existe pas
+
+L'add-on fournit **47 extensions par défaut** et **10 sur ticket**. La liste
+« à la demande » est fermée.
+
+| Extension utilisée ici | Chez Clever Cloud |
+|---|---|
+| `postgis` 3.3.7 | **par défaut** |
+| `vector` 0.8.2 | **par défaut** — `pgvector` figure dans les extensions livrées |
+| `pgcrypto`, `uuid-ossp`, `pg_trgm`, `btree_gist`, `unaccent` | **par défaut** |
+| `pg_cron` 1.6.4, `pg_net` 0.20.4 | **sur ticket** |
+| **`pgsodium`, `supabase_vault`, `pgmq`, `pgjwt`, `pg_graphql`** | **indisponibles** |
+
+Cinq des extensions de ce projet n'ont donc **aucune cible**. C'est le point de
+bascule du plan, et il est tranché : il faut réécrire, pas porter.
 
 | Brique | Source, mesurée | Cible Clever Cloud envisagée | Statut |
 |---|---|---|---|
-| PostgreSQL | 17.6, 16 tables, 55 policies | Add-on PostgreSQL | natif |
-| Extensions | 16 installées : `postgis` 3.3.7, `vector` 0.8.2, `pgmq` 1.5.1, `pg_cron` 1.6.4, `pg_net` 0.20.4, `supabase_vault` 0.3.1, `pgsodium` 3.1.8, `pgjwt` 0.2.0… | Add-on PostgreSQL | **à vérifier une par une** — point de bascule du plan |
-| Chiffrement TCE du NIR | `SECURITY LABEL FOR pgsodium ON COLUMN medical.patients.nir_chiffre` | aucune cible directe | **arbitrage n°1** : chiffrement applicatif (`lib/chiffrement.ts`) |
-| Rôles | `postgres` porte **BYPASSRLS** ; `authenticated`/`anon`/`service_role` cités 141 fois ; `supabase_admin` 15 fois | à recréer, `authenticator` doit les endosser | **à ne pas sous-estimer** — 2 tables sont en `force row level security` |
-| PostgREST | schémas exposés : `public`, `graphql_public`, `medical` | Application Docker | à déployer |
-| GoTrue | hook `custom_access_token`, MFA TOTP, auth anonyme, liaison d'identités, OIDC Pro Santé Connect | Add-on Keycloak, ou GoTrue en Docker | arbitrage à poser |
-| Storage | 4 buckets — `avatars` 2 Mio, `documents-medicaux` 50 Mio, `ordonnances` 5 Mio, `imagerie` 5 Gio | Cellar (S3-compatible) | natif, mais l'API Storage est une surcouche |
-| Transformation d'image | `getPublicUrl(..., { transform })` | imgproxy en application Docker | conteneur supplémentaire |
+| PostgreSQL | 17.6, 16 tables, 55 policies | Add-on PostgreSQL (14 à 18 supportées) | natif — mais voir la contrainte de rôles ci-dessus |
+| Chiffrement TCE du NIR | `SECURITY LABEL FOR pgsodium ON COLUMN medical.patients.nir_chiffre` | **aucune cible** — `pgsodium` indisponible | **tranché** : chiffrement applicatif (`lib/chiffrement.ts`), ou `pgcrypto` |
+| Rôles | `postgres` porte **BYPASSRLS** ; `authenticated`/`anon`/`service_role` cités 141 fois ; `supabase_admin` 15 fois | **impossible à recréer sur l'add-on managé** | **le point qui décide de l'architecture cible** |
+| PostgREST | schémas exposés : `public`, `graphql_public`, `medical` | `postgrest/postgrest:v16.1`, port 3000 — **ou suppression pure** | recommandé : **supprimer**, au profit d'un backend applicatif |
+| GoTrue | hook `custom_access_token`, MFA TOTP, auth anonyme, liaison d'identités, OIDC Pro Santé Connect | **Add-on Keycloak** (natif), ou `supabase/auth` en Docker | Keycloak évite un conteneur à exploiter |
+| Storage | 4 buckets — `avatars` 2 Mio, `documents-medicaux` 50 Mio, `ordonnances` 5 Mio, `imagerie` 5 Gio | **Cellar** | natif. L'API Storage n'est nécessaire que si les policies RLS sur objets le sont |
+| Transformation d'image | `getPublicUrl(..., { transform })` | `ghcr.io/imgproxy/imgproxy:v4.0.12`, port 8080 | conteneur le plus simple ; **signer les URL**, désactivé par défaut |
 | Upload reprenable TUS | segments de 6 Mio imposés | à valider derrière le load balancer | à tester |
-| Realtime | 3 tables publiées, `replica identity full`, policies sur `realtime.messages` | Application Docker dédiée | poste le plus coûteux |
+| Realtime | 3 tables publiées, `replica identity full`, policies sur `realtime.messages` | `supabase/realtime:v2.126.0` — **Postgres Changes hors d'atteinte sur l'add-on managé** (pas de `wal_level=logical`) | Broadcast et Presence, eux, ne dépendent pas du décodage logique : **vérifier lesquels sont réellement utilisés avant de renoncer** |
 | Edge Functions | 5 fonctions Deno, 3 secrets | Applications Clever Cloud (Docker/Node) | 1 app, ou 5 endpoints d'une app |
-| `pg_cron` | **5 jobs**, tous actifs | Cron Clever Cloud (`clevercloud/cron.json`) | **sortir la logique de la base** |
-| `pg_net` | appel sortant en trigger ; réponses dans `net._http_response` | Appel HTTP applicatif | même logique : sortir de la base |
-| `supabase_vault` | 3 secrets, dont `service_role_key` lu par les jobs cron | Variables d'environnement | natif, `clever env set` |
-| `pgmq` | 3 files, trigger d'empilement | Add-on Pulsar, ou `pgmq` conservé en base | arbitrage à poser |
+| `pg_cron` | **5 jobs**, tous actifs | `clevercloud/cron.json` (disponible sur ticket si on veut le garder en base) | **sortir la logique de la base**. Piège : les crons s'exécutent sur **chaque scaler** — dédupliquer sur `INSTANCE_NUMBER` |
+| `pg_net` | appel sortant en trigger ; réponses dans `net._http_response` | Appel HTTP applicatif (disponible sur ticket sinon) | même logique : sortir de la base |
+| `supabase_vault` | 3 secrets, dont `service_role_key` lu par les jobs cron | **indisponible** → variables d'environnement | natif, `clever env import` |
+| `pgmq` | 3 files, trigger d'empilement | **indisponible** → add-on Pulsar, ou table de file + `pg_cron` | tranché : Pulsar est natif |
 | Database Webhooks | schéma `supabase_functions`, fonction trigger `http_request()` sans argument déclaré (TG_ARGV), rôle `supabase_functions_admin` | surcouche maison à `pg_net` | à réécrire côté application |
 | `pg_graphql` | 1.6.1, activée, **aucun appel dans le code** | aucune cible | **à ne pas porter**, et à le dire |
 | Clés | `anon` publishable, `service_role` secret, JWT secret | Variables d'environnement, JWT à régénérer de façon cohérente | à reprendre en entier |
 
-Option à considérer face à l'empilement de conteneurs (PostgREST + GoTrue +
-Realtime + imgproxy) : **Kubernetes Clever Cloud** pour héberger la stack de
-services, avec les add-ons managés (PostgreSQL, Cellar) à côté.
+### Deux pièges de plateforme, vérifiés
+
+- **Il n'existe pas de fichier `clever.json`.** Aucun manifeste de déploiement
+  équivalent à `fly.toml`. La configuration passe par les variables `CC_*`, les
+  fichiers natifs du langage, et `clevercloud/*.json`. `.clever.json` (avec le
+  point) est un fichier de liaison local de la CLI, non lu par la plateforme.
+- **Les crons s'exécutent sur chaque scaler.** Avec trois instances, une tâche
+  part trois fois. Le clustering n'est pas supporté : la déduplication est à la
+  charge de l'application, sur `INSTANCE_NUMBER`. C'est le piège n°1 quand on
+  remplace `pg_cron` par du cron Clever Cloud — en base, le job tournait une
+  fois.
+
+Face à l'empilement de conteneurs (PostgREST + GoTrue + Realtime + imgproxy) :
+**Kubernetes Clever Cloud (CKE)** pour héberger la stack, avec les add-ons
+managés à côté. Mais la première question reste : **a-t-on vraiment besoin de
+cette stack ?** Un backend applicatif classique la remplace et supprime quatre
+conteneurs.
+
+### Outillage réutilisable
+
+La méthode générique, l'outillage et les gabarits de déploiement sont
+disponibles comme skill : `~/.claude/skills/migration-supabase-clever/`,
+invocable par `/migration-supabase-clever`. Le cas travaillé ici est dans
+[PROCEDURE-MIGRATION.md](PROCEDURE-MIGRATION.md).
 
 ## Règles de travail
 
