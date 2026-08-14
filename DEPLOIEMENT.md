@@ -120,21 +120,28 @@ déclaré dans `config.toml`, ainsi que l'auth anonyme, la liaison manuelle
 d'identités et la MFA.
 
 ```bash
-NEXT_PUBLIC_SITE_URL=http://localhost:3000 supabase config push
+./scripts/config-push.sh
 ```
 
-La variable doit être exportée : **la CLI ne résout pas les `env()` absents**,
-elle pousse la chaîne `"env(NEXT_PUBLIC_SITE_URL)"` telle quelle.
-
-Le bloc `[auth]` part en un seul appel API — une seule sous-section invalide
-fait échouer tout le reste, hook compris. Trois d'entre elles sont donc
-neutralisées dans `config.toml`, avec la raison en commentaire :
+**Ne pas lancer `supabase config push` directement.** Le bloc `[auth]` part en
+un seul appel API : une seule sous-section invalide fait échouer tout le reste,
+hook compris. Trois posent problème sur ce déploiement :
 
 | Section | Pourquoi |
 |---|---|
 | `[auth.email.template.*]` | le plan gratuit refuse toute modification de gabarit sans SMTP custom (`400`) |
-| `[auth.email.smtp]` | `SMTP_USER` / `SMTP_PASS` non renseignés → poussés littéralement |
-| `[auth.external.keycloak]`, `[auth.external.google]` | idem, pas de credentials OIDC sur ce déploiement |
+| `[auth.email.smtp]` | `SMTP_USER` / `SMTP_PASS` non renseignés → **poussés littéralement**, la CLI ne résout pas les `env()` absents |
+| `[auth.external.keycloak]`, `[auth.external.google]` | idem, pas de credentials OIDC ici |
+
+Le script les neutralise dans une **copie temporaire**, pousse, puis restaure —
+avec un `trap` qui garantit la restauration même en cas d'erreur.
+
+**Pourquoi ce détour plutôt que d'éditer le fichier** : `config.toml` est le
+corpus de test. Il déclare la surface Supabase que le plan de migration doit
+trouver — SMTP Brevo, gabarits surchargés, OIDC Pro Santé Connect. Le
+neutraliser en dur désamorcerait l'exercice : une analyse lirait
+« `enabled = false`, donc à ne pas porter ». La contrainte de déploiement ne
+doit pas contaminer le corpus.
 
 Sans le hook, les claims `role_metier`, `praticien_id` et `patient_id` sont
 absents du JWT et la moitié des policies RLS renvoie zéro ligne.

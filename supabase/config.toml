@@ -61,33 +61,22 @@ double_confirm_changes = true
 secure_password_change = true
 otp_expiry = 600
 
-# SMTP transactionnel Brevo.
-# DESACTIVE sur ce deploiement : sans SMTP_USER / SMTP_PASS, `supabase config
-# push` pousserait les chaines "env(SMTP_USER)" telles quelles et casserait
-# l'envoi d'e-mails. Reactiver en renseignant les deux variables avant le push.
-# [auth.email.smtp]
-# host = "smtp-relay.brevo.com"
-# port = 587
-# user = "env(SMTP_USER)"
-# pass = "env(SMTP_PASS)"
-# admin_email = "no-reply@sillage-sante.example"
-# sender_name = "Sillage Sante"
+[auth.email.smtp]
+host = "smtp-relay.brevo.com"
+port = 587
+user = "env(SMTP_USER)"
+pass = "env(SMTP_PASS)"
+admin_email = "no-reply@sillage-sante.example"
+sender_name = "Sillage Sante"
 
-# Gabarits d'e-mails transactionnels surcharges.
-# DESACTIVES sur ce deploiement : le plan gratuit Supabase refuse toute
-# modification de gabarit tant qu'un SMTP custom n'est pas configure
-#   400 "Email template modification is not available for free tier projects
-#        using the default email provider."
-# Le bloc [auth] etant pousse en un seul appel, ces deux sections faisaient
-# echouer TOUT le push auth, hook custom_access_token compris.
-# Les gabarits restent dans templates/ : c'est un point de la migration.
-# [auth.email.template.magic_link]
-# subject = "Votre lien de connexion Sillage Sante"
-# content_path = "./templates/magic_link.html"
+# Gabarits d'e-mails transactionnels surcharges
+[auth.email.template.magic_link]
+subject = "Votre lien de connexion Sillage Sante"
+content_path = "./templates/magic_link.html"
 
-# [auth.email.template.invite]
-# subject = "Vous etes invite sur Sillage Sante"
-# content_path = "./templates/invite.html"
+[auth.email.template.invite]
+subject = "Vous etes invite sur Sillage Sante"
+content_path = "./templates/invite.html"
 
 [auth.sms]
 enable_signup = false
@@ -101,22 +90,16 @@ max_enrolled_factors = 3
 enroll_enabled = true
 verify_enabled = true
 
-# Fournisseur d'identite des professionnels de sante (Pro Sante Connect).
-# enabled = false tant que PSC_CLIENT_ID / PSC_CLIENT_SECRET / PSC_ISSUER_URL
-# ne sont pas renseignes : la CLI ne resout pas les env() manquants, elle
-# pousserait la chaine "env(PSC_CLIENT_ID)" comme client_id.
-# La surface reste declaree : c'est un point du plan de migration (OIDC a
-# rebrancher sur le GoTrue ou le Keycloak cible).
+# Fournisseur d'identite des professionnels de sante (Pro Sante Connect)
 [auth.external.keycloak]
-enabled = false
+enabled = true
 client_id = "env(PSC_CLIENT_ID)"
 secret = "env(PSC_CLIENT_SECRET)"
 url = "env(PSC_ISSUER_URL)"
 redirect_uri = "env(NEXT_PUBLIC_SITE_URL)/auth/callback"
 
-# Meme raison : pas de credentials Google sur ce deploiement de demo.
 [auth.external.google]
-enabled = false
+enabled = true
 client_id = "env(GOOGLE_CLIENT_ID)"
 secret = "env(GOOGLE_SECRET)"
 skip_nonce_check = false
