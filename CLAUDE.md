@@ -320,6 +320,53 @@ disponibles comme skill : `~/.claude/skills/migration-supabase-clever/`,
 invocable par `/migration-supabase-clever`. Le cas travaillé ici est dans
 [PROCEDURE-MIGRATION.md](PROCEDURE-MIGRATION.md).
 
+## HDS — ce qui contraint l'architecture
+
+Le scénario de la démo est HDS. Points contre-expertisés (12 affirmations, un
+réfuteur chacune, sources primaires) — fiche complète dans
+`~/.claude/skills/migration-supabase-clever/references/hds.md`.
+
+### La zone se choisit à la création, et ne se rattrape pas
+
+**`par`, la zone par défaut, n'est pas HDS** — alors qu'elle tourne dans les
+mêmes datacenters parisiens que `parhds` et partage ses plages d'IP sortantes.
+Une application créée sans `--region parhds` est hors périmètre certifié tout
+en étant « à Paris ». **Aucun signal à l'exécution** : ça marche, rien n'alerte.
+
+Zones ouvertes au déploiement applicatif : `parhds`, `grahds`, `rbxhds`.
+
+**Et la zone ne suffit pas** : l'hébergement certifié suppose zone HDS **et**
+contrat HDS signé. Devant un client, dire *« zone HDS + contrat HDS signé »*,
+jamais *« déployé en région HDS, donc conforme »*.
+
+### Trois croyances fausses à ne pas répéter
+
+Le référentiel HDS v2.0 **n'impose ni le chiffrement au repos, ni la MFA, ni
+aucune durée de conservation des journaux** — zéro occurrence de ces notions
+dans le texte. Ces obligations existent, mais viennent d'ailleurs : référentiel
+CNIL entrepôts pour le chiffrement, arrêté PGSSI-S du 28 mars 2022 pour
+l'authentification forte, contrat pour les durées. Les attribuer au HDS fait
+perdre la discussion dès qu'un juriste ouvre le référentiel.
+
+**Piège documentaire** : le PDF « Référentiel HDS v2.1 — version en
+concertation » est le premier résultat des moteurs sur esante.gouv.fr. Il est
+en mode révision et **n'est pas opposable**. Le texte en vigueur est la **v2.0**
+(arrêté du 26 avril 2024). Il a piégé 9 vérifications sur 12.
+
+### Ce que ça change pour ce projet
+
+- **Le journal d'audit devient un composant à part entière.** La durée de
+  conservation relève du responsable de traitement et se fixe **au contrat**,
+  pas du référentiel. Or ici il pesait déjà 268 Mo pour 40 001 lignes, plus
+  lourd que les données tracées, avec une purge à trois ans qui ne se
+  déclenchait jamais. À dimensionner en conception.
+- **Le chiffrement au repos de PostgreSQL** n'est disponible que sur les plans
+  **dédiés**, n'est **pas actif par défaut**, et s'active sur ticket support.
+  À demander au provisionnement.
+- **La MFA TOTP du parcours praticien** relève de l'application, pas de
+  l'hébergement. Elle reste justifiée — mais par l'analyse de risque et
+  l'arrêté PGSSI-S, pas par le HDS.
+
 ## Règles de travail
 
 - **Clever Cloud first.** Toujours proposer la solution la plus native et la
