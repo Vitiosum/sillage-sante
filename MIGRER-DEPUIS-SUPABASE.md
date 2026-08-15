@@ -1,5 +1,7 @@
 # Migrer depuis Supabase — cas de référence mesuré
 
+*[English version](MIGRATING-FROM-SUPABASE.md)*
+
 Ce document répond à une question précise : **qu'est-ce qui se passe vraiment
 quand on sort une application de Supabase ?**
 

@@ -1,10 +1,33 @@
-# Sillage Santé — sortir de Supabase, mesuré
+# Sortir de Supabase, mesuré — Supabase to Clever Cloud
 
 Une application Supabase complète, réellement déployée, réellement mesurée,
 puis analysée pour une reprise ailleurs. **Tous les chiffres publiés ici
 viennent de cette exécution, pas d'une estimation.**
 
-## Vous cherchez à migrer depuis Supabase
+*A complete Supabase application, actually deployed, actually measured, then
+analysed for a move elsewhere. **Every figure here comes from that run, not
+from an estimate.***
+
+---
+
+## 🇬🇧 In English
+
+| Document | What it answers |
+|---|---|
+| **[MIGRATING-FROM-SUPABASE.md](MIGRATING-FROM-SUPABASE.md)** | What carries over, what has **no equivalent**, what the cutover costs in time, and how to prove the migration is faithful. **Start here.** |
+| **[LANDING-ON-CLEVER-CLOUD.md](LANDING-ON-CLEVER-CLOUD.md)** | The concrete path: target architecture, commands, component-by-component mapping, and how to price it. |
+
+In one sentence: **you don't migrate Supabase, you migrate your application.**
+Five components have no equivalent anywhere else, and a standard managed
+database cannot host the Supabase stack. The simplest path is not to rebuild it
+— it is to replace it with an ordinary backend.
+
+*French health data hosting (HDS) is covered in French only, its subject being
+French law.*
+
+---
+
+## 🇫🇷 Vous cherchez à migrer depuis Supabase
 
 | Document | Ce qu'il répond |
 |---|---|
