@@ -229,26 +229,29 @@ Un harnais générique est fourni en annexe.
 
 ## 7. Si votre contexte est réglementé
 
-Trois précisions vérifiées dans les textes, qui évitent de dimensionner sur des
-idées reçues. Elles concernent l'hébergement de données de santé en France,
-mais le raisonnement vaut ailleurs : **vérifiez d'où vient l'obligation avant
-de concevoir pour elle.**
+Une règle générale, avant tout : **vérifiez d'où vient l'obligation avant de
+concevoir pour elle.** Beaucoup d'exigences attribuées à un référentiel de
+certification viennent en réalité d'un autre texte, ou du contrat. Concevoir
+sur une idée reçue coûte cher, et se voit dès qu'un juriste ouvre le document.
 
-**Le référentiel de certification HDS v2.0 n'impose ni le chiffrement au repos,
-ni l'authentification multifacteur, ni aucune durée de conservation des
-journaux.** Aucune occurrence de ces notions dans le texte. Ces exigences
-existent, mais viennent du référentiel CNIL « entrepôts de données de santé »,
-de l'arrêté du 28 mars 2022, ou du contrat.
+Deux conséquences valables quel que soit le régime :
 
-**Attention à la version du texte que vous lisez.** Le document le mieux
-référencé par les moteurs de recherche est une version *en concertation*,
-affichée en mode révision, et **non opposable**. Le texte en vigueur est la
-v2.0, approuvée par arrêté du 26 avril 2024.
+**La région de déploiement ne suffit pas.** Un hébergement certifié suppose
+généralement une zone certifiée *et* un contrat spécifique. La zone par défaut
+d'une plateforme peut être physiquement au bon endroit sans être dans le
+périmètre certifié — **sans aucun signal à l'exécution**. Le choix de zone se
+fait à la création et ne se rattrape pas.
 
-**La région de déploiement ne suffit pas.** L'hébergement certifié suppose une
-zone certifiée *et* un contrat spécifique. Et la zone par défaut d'une
-plateforme peut être physiquement au bon endroit sans être dans le périmètre
-certifié — sans aucun signal à l'exécution.
+**La traçabilité se dimensionne en conception.** Sur l'application de
+référence, le journal d'audit pesait plus lourd que les données qu'il traçait.
+Découverte en recette, cette contrainte fait exploser le stockage.
+
+> **Hébergement de données de santé en France (HDS)** : les exigences
+> applicables, ce qui est réellement imposé et ce qui ne l'est pas, sont
+> traitées dans un document distinct —
+> [MIGRER-DEPUIS-SUPABASE-HDS.md](MIGRER-DEPUIS-SUPABASE-HDS.md).
+> Tout ce qui précède reste valable ; le HDS ajoute des contraintes, il ne
+> change pas la migration.
 
 ---
 

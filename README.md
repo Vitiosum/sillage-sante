@@ -1,24 +1,40 @@
-# Sillage Santé
+# Sillage Santé — sortir de Supabase, mesuré
 
-> **Vous cherchez à sortir de Supabase ?**
-> Commencez par [MIGRER-DEPUIS-SUPABASE.md](MIGRER-DEPUIS-SUPABASE.md) — ce qui
-> se reprend, ce qui n'a aucun équivalent, ce que ça coûte en temps, et comment
-> prouver que la reprise est fidèle. Mesuré, pas théorique.
->
-> **Objectif de ce dépôt : démo de migration Supabase Cloud → Clever Cloud.**
-> C'est le cas de test qui a servi à produire ce document, pas un produit. Voir [CLAUDE.md](CLAUDE.md) pour
-> la cible, la cartographie des composants et les règles de travail.
->
-> Déploiement de la source pas à pas : [DEPLOIEMENT.md](DEPLOIEMENT.md)
-> Ce que le déploiement réel a révélé : [CONSTATS-DEPLOIEMENT.md](CONSTATS-DEPLOIEMENT.md)
-> La méthode, déroulée sur ce cas : [PROCEDURE-MIGRATION.md](PROCEDURE-MIGRATION.md)
+Une application Supabase complète, réellement déployée, réellement mesurée,
+puis analysée pour une reprise ailleurs. **Tous les chiffres publiés ici
+viennent de cette exécution, pas d'une estimation.**
 
-Plateforme de téléconsultation et de suivi de dossiers patients, construite sur
-**Supabase Cloud**. Next.js 14 (App Router) côté front, PostgREST appelé
-directement depuis le navigateur, aucun backend intermédiaire.
+## Vous cherchez à migrer depuis Supabase
 
-> Dépôt de démonstration. Aucune donnée réelle, aucun secret valide.
-> Il sert de cas de test à un exercice de migration vers Clever Cloud.
+| Document | Ce qu'il répond |
+|---|---|
+| **[MIGRER-DEPUIS-SUPABASE.md](MIGRER-DEPUIS-SUPABASE.md)** | Ce qui se reprend tel quel, ce qui n'a **aucun équivalent**, ce que coûte la bascule en temps, et comment prouver que la reprise est fidèle. **Commencez ici.** |
+| [MIGRER-DEPUIS-SUPABASE-HDS.md](MIGRER-DEPUIS-SUPABASE-HDS.md) | Le supplément si vous hébergez des données de santé : ce que le référentiel impose réellement — et les quatre idées reçues qui font dimensionner à côté. |
+
+En une phrase : **on ne migre pas Supabase, on migre son application.** Cinq
+composants n'ont aucun équivalent ailleurs, et une base managée standard ne
+peut pas héberger la stack Supabase. Le chemin le plus simple n'est pas de la
+reconstituer — c'est de la remplacer par un backend ordinaire.
+
+## Vous voulez l'application de référence
+
+C'est le code de ce dépôt : une plateforme de téléconsultation sur **Supabase
+Cloud**, Next.js 14 côté front, PostgREST appelé directement depuis le
+navigateur, aucun backend intermédiaire.
+
+Elle est **volontairement dense** — PostgREST, GoTrue, Storage, Realtime, Edge
+Functions, `pg_cron`, `pg_net`, Vault, `pgmq`, PostGIS, pgvector — pour que la
+démonstration couvre une large surface. La vôtre en utilise probablement moins.
+
+| Document | Pour |
+|---|---|
+| [DEPLOIEMENT.md](DEPLOIEMENT.md) | déployer l'application sur un projet Supabase neuf |
+| [CONSTATS-DEPLOIEMENT.md](CONSTATS-DEPLOIEMENT.md) | ce que le déploiement réel a révélé, et que la lecture du code ne montrait pas |
+| [PROCEDURE-MIGRATION.md](PROCEDURE-MIGRATION.md) | la méthode complète, déroulée sur ce cas |
+| [CLAUDE.md](CLAUDE.md) | cartographie composant par composant et règles de travail |
+
+> Aucune donnée réelle, aucun secret valide. Le dépôt sert aussi de cas de test
+> à un exercice de migration : certaines difficultés y sont **volontaires**.
 
 ## Le produit en une page
 
