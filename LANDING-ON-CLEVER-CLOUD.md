@@ -111,11 +111,12 @@ Five do not exist and must be rewritten: `pgsodium`, `supabase_vault`, `pgmq`,
 
 ### Your RLS policies
 
-**They carry over unchanged** — this is standard PostgreSQL. What does not
-carry over are the **roles** they rely on: a managed add-on does not let you
-create `anon`, `authenticated` or `service_role`.
+**They carry over unchanged** — this is standard PostgreSQL. What needs a
+decision are the **roles** they rely on: `anon`, `authenticated` and
+`service_role` cannot be created by default on a managed add-on. Support can
+open that up on request — budget the lead time, and get the answer in writing.
 
-Two options:
+If you would rather not depend on that request, two options:
 
 - **keep RLS**, anchored to the owner role, with the application setting the
   user context on every request;
@@ -206,7 +207,9 @@ clever scale --alias my-app --min-instances 1 --max-instances 3 --build-flavor M
 ```
 
 **Backups are daily, kept 7 days.** Frequency and retention are not
-configurable. If your RPO is shorter, plan your own dumps.
+self-service — but **PITR** (point-in-time recovery) is available **on request
+to support**. If you are coming from a Supabase tier with PITR, file that
+request at provisioning time, not at the first incident.
 
 ---
 
@@ -320,7 +323,9 @@ In a regulated context, it is also a document worth keeping.
 - The **connection count per plan** is not published. Ask for it.
 - **Encryption at rest** is neither on by default nor available everywhere.
 - **`pg_cron` and `pg_net` go through a support ticket** — budget the delay.
-- **Postgres Changes will not work** on a managed add-on. If you genuinely
+- **Postgres Changes is not available by default** on a managed add-on
+  (`wal_level=logical` is not exposed). Support reviews such requests — never
+  plan on it without written confirmation. If you genuinely
   depend on it, the answer is Kubernetes.
 
 Better to know now than halfway through a cutover.

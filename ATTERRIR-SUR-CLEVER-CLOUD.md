@@ -109,11 +109,12 @@ Cinq n'existent pas et se réécrivent : `pgsodium`, `supabase_vault`, `pgmq`,
 ### Vos policies RLS
 
 **Elles se reprennent telles quelles** — c'est du PostgreSQL standard. Ce qui
-ne se reprend pas, ce sont les **rôles** sur lesquels elles s'appuient : un
-add-on managé n'autorise pas à créer `anon`, `authenticated` ou
-`service_role`.
+demande une décision, ce sont les **rôles** sur lesquels elles s'appuient :
+`anon`, `authenticated` et `service_role` ne sont pas créables par défaut sur
+un add-on managé. Le support peut les ouvrir sur demande — comptez le délai, et
+obtenez la réponse par écrit.
 
-Deux options :
+Si vous ne voulez pas dépendre de cette demande, deux options :
 
 - **garder la RLS** en la rattachant au rôle propriétaire, l'application
   positionnant le contexte utilisateur à chaque requête ;
@@ -205,8 +206,10 @@ D'où l'instance de build dédiée :
 clever scale --alias mon-app --min-instances 1 --max-instances 3 --build-flavor M
 ```
 
-**Les sauvegardes sont quotidiennes, 7 jours.** Fréquence et rétention ne sont
-pas pilotables. Si votre RPO est plus court, prévoyez vos propres dumps.
+**Les sauvegardes sont quotidiennes, 7 jours.** Fréquence et rétention ne se
+règlent pas soi-même — mais le **PITR** (restauration à un instant donné)
+existe **sur demande au support**. Si vous veniez d'une offre Supabase avec
+PITR, faites la demande au provisionnement, pas au premier incident.
 
 ---
 
@@ -323,7 +326,9 @@ vérifié ». En contexte réglementé, c'est aussi une pièce à conserver.
 - Le **chiffrement au repos** n'est ni par défaut, ni disponible partout.
 - **`pg_cron` et `pg_net` passent par un ticket** — comptez le délai dans votre
   planning.
-- **Postgres Changes ne fonctionnera pas** sur un add-on managé. Si vous en
-  dépendez vraiment, c'est Kubernetes.
+- **Postgres Changes n'est pas disponible par défaut** sur un add-on managé
+  (`wal_level=logical` n'est pas exposé). Le support étudie ces demandes — ne
+  planifiez jamais dessus sans confirmation écrite. Si vous en dépendez
+  vraiment et sans accord écrit, c'est Kubernetes.
 
 Mieux vaut le savoir maintenant qu'au milieu d'une bascule.

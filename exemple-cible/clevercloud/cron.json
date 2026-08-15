@@ -1,0 +1,4 @@
+[
+  "0 * * * * $ROOT/clevercloud/tache.sh rappel-rdv",
+  "*/5 * * * * $ROOT/clevercloud/tache.sh traiter-files"
+]

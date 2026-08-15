@@ -110,9 +110,15 @@ Porting it would have cost time for nothing.
 ### The constraint that decides your architecture
 
 A managed PostgreSQL add-on — on Clever Cloud as elsewhere — does not grant
-superuser and **does not allow role creation**.
+superuser, and **role creation is not open by default**.
 
-The self-hosted Supabase stack requires exactly that:
+It is not closed either: it is a **support request**, reviewed case by case.
+The same goes for PITR, read replicas and on-demand extensions. What changes is
+therefore not feasibility — it is the **lead time**, and the fact that it must
+be confirmed in writing before you commit to a schedule. See "What goes through
+support" below.
+
+The self-hosted Supabase stack requires exactly those roles:
 
 | Component | Roles required |
 |---|---|
@@ -127,16 +133,38 @@ The self-hosted Supabase stack requires exactly that:
 
 **Three possible routes**, simplest first:
 
-1. **Replace the stack with an application backend.** The recommended answer in
-   most cases.
-2. **PostgreSQL on Kubernetes** if the stack must be preserved as-is: full
-   control, but the database is no longer managed.
-3. **Dedicated plan plus a support request.** Qualify case by case, and never
-   promise it without a written answer.
+1. **Replace the stack with an application backend.** Recommended in most
+   cases: no exotic roles to obtain, no container to operate, and your RLS
+   policies carry over (see
+   [LANDING-ON-CLEVER-CLOUD.md](LANDING-ON-CLEVER-CLOUD.md), section 3).
+2. **Request the roles from support** and keep the stack on the managed add-on.
+   Viable if you want PostgREST or GoTrue as-is — provided you get written
+   agreement before planning around it.
+3. **PostgreSQL on Kubernetes** if you want full control, including `wal_level`
+   for *Postgres Changes*: you then take back backups, upgrades and monitoring.
 
 **A caveat on Realtime**: only *Postgres Changes* depends on logical decoding.
 *Broadcast* and *Presence* do not. Check which one you actually use before
 giving up — many applications only use the latter two.
+
+### What goes through support
+
+None of these is a blocker. All are **lead times** to build into the plan, and
+answers to obtain **in writing** before committing.
+
+| Need | Status |
+|---|---|
+| PostgreSQL role creation | not by default — support reviews the case |
+| **PITR** (point-in-time recovery) | on request |
+| Read replicas | on request, via support or your account manager |
+| On-demand extensions (`pg_cron`, `pg_net`, `pgaudit`…) | by ticket |
+| Encryption at rest | dedicated plans, off by default, on request |
+| Maximum connections per plan | not published — **ask for it** |
+
+PITR deserves its own mention: add-on backups are **daily, kept 7 days**, and
+the frequency is not configurable. If you are coming from a Supabase tier that
+included PITR, that is a service-level difference to address explicitly, not an
+operational detail.
 
 ---
 

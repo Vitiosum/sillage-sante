@@ -113,9 +113,15 @@ dans le code. La porter aurait coûté du temps pour rien.
 ### La contrainte qui décide de l'architecture
 
 Un add-on PostgreSQL managé — chez Clever Cloud comme ailleurs — n'accorde pas
-le superutilisateur et **n'autorise pas la création de rôles**.
+le superutilisateur, et **la création de rôles n'est pas ouverte par défaut**.
 
-Or la stack Supabase auto-hébergée en exige :
+Elle n'est pas fermée pour autant : c'est une **demande au support**, qui
+étudie le cas. Même chose pour le PITR, les réplicas et les extensions à la
+demande. Ce qui change, ce n'est donc pas la faisabilité — c'est le **délai**,
+et le fait que ça doit être acté par écrit avant de s'engager sur un planning.
+Voir la section « Ce qui passe par le support » ci-dessous.
+
+Or la stack Supabase auto-hébergée exige ces rôles :
 
 | Brique | Rôles nécessaires |
 |---|---|
@@ -130,16 +136,40 @@ Clever Cloud](https://www.clever.cloud/developers/doc/addons/postgresql/).*
 
 **Trois voies possibles**, par ordre de simplicité :
 
-1. **Remplacer la stack par un backend applicatif.** La solution recommandée
-   dans la majorité des cas.
-2. **PostgreSQL sur Kubernetes** si la stack doit être conservée à
-   l'identique : contrôle complet, mais la base n'est plus managée.
-3. **Base dédiée + demande au support.** À qualifier au cas par cas, et à ne
-   jamais promettre sans réponse écrite.
+1. **Remplacer la stack par un backend applicatif.** Recommandée dans la
+   majorité des cas : aucun rôle exotique à obtenir, aucun conteneur à
+   exploiter, et vos policies RLS se conservent (voir
+   [ATTERRIR-SUR-CLEVER-CLOUD.md](ATTERRIR-SUR-CLEVER-CLOUD.md), section 3).
+2. **Demander les rôles au support** et conserver la stack sur l'add-on
+   managé. Viable si vous tenez à PostgREST ou GoTrue tels quels — à condition
+   d'obtenir l'accord par écrit avant de planifier.
+3. **PostgreSQL sur Kubernetes** si vous voulez le contrôle complet, y compris
+   `wal_level` pour *Postgres Changes* : vous reprenez alors sauvegardes,
+   montées de version et supervision.
 
 **Nuance sur Realtime** : seul *Postgres Changes* dépend du décodage logique.
 *Broadcast* et *Presence* n'en dépendent pas. Vérifiez lequel vous utilisez
 avant de renoncer — beaucoup d'applications n'emploient que les seconds.
+
+### Ce qui passe par le support
+
+Aucun de ces points n'est bloquant. Tous sont des **délais** à intégrer au
+planning, et des réponses à obtenir **par écrit** avant de s'engager.
+
+| Besoin | Statut |
+|---|---|
+| Création de rôles PostgreSQL | pas par défaut — le support étudie le cas |
+| **PITR** (restauration à un instant donné) | sur demande |
+| Réplicas de lecture | sur demande, via support ou commercial |
+| Extensions à la demande (`pg_cron`, `pg_net`, `pgaudit`…) | sur ticket |
+| Chiffrement au repos | plans dédiés, non actif par défaut, sur demande |
+| Nombre de connexions maximal par plan | non publié — **à demander** |
+
+Le PITR mérite une mention à part : les sauvegardes de l'add-on sont
+**quotidiennes, conservées 7 jours**, et leur fréquence n'est pas
+configurable. Si vous veniez d'une offre Supabase incluant du PITR, c'est une
+différence de niveau de service à traiter explicitement, pas un détail
+d'intendance.
 
 ---
 

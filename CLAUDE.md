@@ -237,8 +237,10 @@ sources : `~/.claude/skills/migration-supabase-clever/references/clever-cloud.md
 
 ### Le constat qui tranche avant tous les arbitrages
 
-**L'add-on PostgreSQL managé n'autorise ni superuser, ni création de rôles, ni
-réplication logique.** La documentation liste explicitement comme impossibles
+**L'add-on PostgreSQL managé n'ouvre par défaut ni superuser, ni création de
+rôles, ni réplication logique.** Le support étudie ces demandes au cas par cas
+(rôles, PITR, réplicas, extensions) : ce n'est pas un mur, c'est un délai à
+planifier et une réponse à obtenir par écrit. La documentation liste explicitement comme impossibles
 l'administration d'utilisateurs, la mise à jour de la configuration serveur et
 la création de réplicas.
 
@@ -279,7 +281,7 @@ bascule du plan, et il est tranché : il faut réécrire, pas porter.
 |---|---|---|---|
 | PostgreSQL | 17.6, 16 tables, 55 policies | Add-on PostgreSQL (14 à 18 supportées) | natif — mais voir la contrainte de rôles ci-dessus |
 | Chiffrement TCE du NIR | `SECURITY LABEL FOR pgsodium ON COLUMN medical.patients.nir_chiffre` | **aucune cible** — `pgsodium` indisponible | **tranché** : chiffrement applicatif (`lib/chiffrement.ts`), ou `pgcrypto` |
-| Rôles | `postgres` porte **BYPASSRLS** ; `authenticated`/`anon`/`service_role` cités 141 fois ; `supabase_admin` 15 fois | **impossible à recréer sur l'add-on managé** | **le point qui décide de l'architecture cible** |
+| Rôles | `postgres` porte **BYPASSRLS** ; `authenticated`/`anon`/`service_role` cités 141 fois ; `supabase_admin` 15 fois | **pas créables par défaut** — ouverture possible sur demande au support | **le point qui décide de l'architecture cible** |
 | PostgREST | schémas exposés : `public`, `graphql_public`, `medical` | `postgrest/postgrest:v16.1`, port 3000 — **ou suppression pure** | recommandé : **supprimer**, au profit d'un backend applicatif |
 | GoTrue | hook `custom_access_token`, MFA TOTP, auth anonyme, liaison d'identités, OIDC Pro Santé Connect | **Add-on Keycloak** (natif), ou `supabase/auth` en Docker | Keycloak évite un conteneur à exploiter |
 | Storage | 4 buckets — `avatars` 2 Mio, `documents-medicaux` 50 Mio, `ordonnances` 5 Mio, `imagerie` 5 Gio | **Cellar** | natif. L'API Storage n'est nécessaire que si les policies RLS sur objets le sont |
