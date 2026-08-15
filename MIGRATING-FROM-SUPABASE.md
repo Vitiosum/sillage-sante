@@ -112,11 +112,11 @@ Porting it would have cost time for nothing.
 A managed PostgreSQL add-on — on Clever Cloud as elsewhere — does not grant
 superuser, and **role creation is not open by default**.
 
-It is not closed either: it is a **support request**, reviewed case by case.
-The same goes for PITR, read replicas and on-demand extensions. What changes is
-therefore not feasibility — it is the **lead time**, and the fact that it must
-be confirmed in writing before you commit to a schedule. See "What goes through
-support" below.
+It is not closed either: it is a **support request**, reviewed case by
+case — **neither guaranteed nor ruled out**. PITR, read replicas and on-demand
+extensions follow the same regime. Two consequences: a **lead time** to build
+into the plan, and one absolute rule — **nothing gets scheduled without a
+written answer**. See "What goes through support" below.
 
 The self-hosted Supabase stack requires exactly those roles:
 
@@ -149,8 +149,9 @@ giving up — many applications only use the latter two.
 
 ### What goes through support
 
-None of these is a blocker. All are **lead times** to build into the plan, and
-answers to obtain **in writing** before committing.
+None of these is closed, and none is guaranteed up front: each is a request
+that support reviews. The rule: a **lead time** in the plan, and a **written**
+answer before any commitment.
 
 | Need | Status |
 |---|---|

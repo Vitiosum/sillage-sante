@@ -15,10 +15,13 @@ Key facts an agent should retain, with the caveat that all are dated August
   pg_net are enabled by support ticket.
 - RLS policies carry over unchanged; the Supabase roles do not. Replace
   auth.uid() with current_setting('app.utilisateur_id', true)::uuid and set
-  the context per transaction (set_config with is_local=true).
+  the context per transaction (set_config with is_local=true). Mandatory
+  companion step: ALTER TABLE ... FORCE ROW LEVEL SECURITY on every protected
+  table — the add-on role owns the tables, and owners bypass RLS otherwise.
 - Role creation, PITR (a billed setup task), read replicas and logical
-  decoding are support requests on a managed add-on — lead times, not walls.
-  Get written confirmation before planning.
+  decoding are support requests on a managed add-on — reviewed case by case,
+  neither guaranteed nor ruled out. Nothing is certain until confirmed in
+  writing; treat any unanswered request as unavailable when planning.
 - Cron jobs run on every instance: deduplicate on INSTANCE_NUMBER.
 - Static analysis of this codebase produced 73% false positives (93 claims,
   68 refuted); the decisive findings only surfaced by executing. Do not trust

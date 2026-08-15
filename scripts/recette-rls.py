@@ -223,7 +223,9 @@ def main():
         print(f"\n  {ecarts} ecart(s). Voir CONSTATS-DEPLOIEMENT.md.")
 
     print("\nRejouer ce script apres migration : une matrice identique = reprise fidele.")
-    return 0
+    # Code de sortie exploitable en CI : 1 des qu'un ecart existe. Sans ca,
+    # « recette verte » ne voulait rien dire.
+    return 1 if ecarts else 0
 
 
 if __name__ == "__main__":

@@ -1,0 +1,53 @@
+{
+  "_lisez_moi": [
+    "Copier en recette.config.json et adapter. Ne pas versionner : contient la cle service_role.",
+    "Les attendus s'ecrivent 'ressource@identite'. Valeurs possibles :",
+    "  0    la ressource doit etre invisible pour cette identite",
+    "  >0   au moins une ligne doit etre visible",
+    "  *    peu importe le nombre, mais pas d'erreur",
+    "  <n>  un nombre exact — a n'utiliser que sur un corpus fige",
+    "Preferer 0 et >0 : le corpus varie d'un environnement a l'autre, les regles d'acces non.",
+    "C'est ce qui permet de rejouer la meme recette sur la source et sur la cible."
+  ],
+
+  "url": "https://xxxxxxxxxxxx.supabase.co",
+  "cle_anon": "sb_publishable_...",
+  "cle_service_role": "sb_secret_...",
+
+  "comptes": [
+    { "email": "patient@example.test",     "role": "patient" },
+    { "email": "praticien@example.test",   "role": "praticien", "mfa": true },
+    { "email": "secretariat@example.test", "role": "secretariat" }
+  ],
+
+  "ressources": [
+    { "nom": "cabinets",         "schema": "medical" },
+    { "nom": "patients",         "schema": "medical" },
+    { "nom": "prises_en_charge", "schema": "medical" },
+    { "nom": "rendez_vous",      "schema": "medical" },
+    { "nom": "consultations",    "schema": "medical" },
+    { "nom": "documents",        "schema": "medical" },
+    { "nom": "messages",         "schema": "medical" },
+    { "nom": "mon_agenda",       "schema": "public" }
+  ],
+
+  "attendus": {
+    "patients@anon": 0,
+    "rendez_vous@anon": 0,
+    "consultations@anon": 0,
+    "documents@anon": 0,
+    "messages@anon": 0,
+
+    "patients@patient": ">0",
+    "rendez_vous@patient": ">0",
+    "consultations@patient": ">0",
+
+    "patients@praticien": ">0",
+    "rendez_vous@praticien": ">0",
+    "consultations@praticien": ">0",
+
+    "rendez_vous@secretariat": ">0",
+    "patients@secretariat": ">0",
+    "consultations@secretariat": 0
+  }
+}

@@ -10,10 +10,21 @@
 // et aucune dépendance à un composant sans équivalent ailleurs.
 // ---------------------------------------------------------------------------
 import express from 'express';
+import { createHash, timingSafeEqual } from 'node:crypto';
 import { avecUtilisateur, pool } from './db.js';
 import { urlSignee } from './stockage.js';
 
 const app = express();
+
+// Jeton des taches planifiees. Exiger sa presence au demarrage : sans ce
+// garde, un API_SERVICE_TOKEN absent donnerait le gabarit litteral
+// « Bearer undefined » — que n'importe qui peut envoyer tel quel.
+const jetonService = process.env.API_SERVICE_TOKEN;
+if (!jetonService) throw new Error('API_SERVICE_TOKEN non defini');
+const empreinte = (s) => createHash('sha256').update(String(s)).digest();
+// Comparaison en temps constant, sur des empreintes de meme longueur.
+const jetonValide = (recu) =>
+  Boolean(recu) && timingSafeEqual(empreinte(recu), empreinte(`Bearer ${jetonService}`));
 app.use(express.json());
 
 // --- Identité ---------------------------------------------------------------
@@ -96,7 +107,7 @@ app.get('/documents/:id/url', async (req, res, suite) => {
 // Appelé par clevercloud/tache.sh, protégé par un jeton : cette route ne doit
 // pas être publique.
 app.post('/taches/:nom', async (req, res, suite) => {
-  if (req.get('authorization') !== `Bearer ${process.env.API_SERVICE_TOKEN}`) {
+  if (!jetonValide(req.get('authorization'))) {
     return res.status(401).json({ erreur: 'non autorisé' });
   }
   try {

@@ -113,13 +113,17 @@ Five do not exist and must be rewritten: `pgsodium`, `supabase_vault`, `pgmq`,
 
 **They carry over unchanged** — this is standard PostgreSQL. What needs a
 decision are the **roles** they rely on: `anon`, `authenticated` and
-`service_role` cannot be created by default on a managed add-on. Support can
-open that up on request — budget the lead time, and get the answer in writing.
+`service_role` cannot be created by default on a managed add-on. Support reviews
+that kind of request — **neither guaranteed nor ruled out**: budget the lead
+time, and commit to nothing without a written answer.
 
 If you would rather not depend on that request, two options:
 
 - **keep RLS**, anchored to the owner role, with the application setting the
-  user context on every request;
+  user context on every request. **Absolute prerequisite**: `alter table …
+  force row level security` on every protected table — the add-on role owns
+  the tables, and an owner bypasses RLS without that `FORCE`. Forget it and
+  every policy is silently ignored;
 - **move authorisation up into the application**, with the database no longer
   acting as a backstop.
 
@@ -327,6 +331,7 @@ In a regulated context, it is also a document worth keeping.
 - **Postgres Changes is not available by default** on a managed add-on
   (`wal_level=logical` is not exposed). Support reviews such requests — never
   plan on it without written confirmation. If you genuinely
-  depend on it, the answer is Kubernetes.
+  depend on it and have no written agreement from support, the answer is
+  Kubernetes.
 
 Better to know now than halfway through a cutover.

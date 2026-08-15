@@ -116,10 +116,10 @@ Un add-on PostgreSQL managé — chez Clever Cloud comme ailleurs — n'accorde 
 le superutilisateur, et **la création de rôles n'est pas ouverte par défaut**.
 
 Elle n'est pas fermée pour autant : c'est une **demande au support**, qui
-étudie le cas. Même chose pour le PITR, les réplicas et les extensions à la
-demande. Ce qui change, ce n'est donc pas la faisabilité — c'est le **délai**,
-et le fait que ça doit être acté par écrit avant de s'engager sur un planning.
-Voir la section « Ce qui passe par le support » ci-dessous.
+étudie le cas — **ni garantie, ni exclue**. Le PITR, les réplicas et les
+extensions à la demande relèvent du même régime. Deux conséquences : un
+**délai** à intégrer au planning, et une règle absolue — **rien ne se planifie
+sans réponse écrite**. Voir « Ce qui passe par le support » ci-dessous.
 
 Or la stack Supabase auto-hébergée exige ces rôles :
 
@@ -153,8 +153,9 @@ avant de renoncer — beaucoup d'applications n'emploient que les seconds.
 
 ### Ce qui passe par le support
 
-Aucun de ces points n'est bloquant. Tous sont des **délais** à intégrer au
-planning, et des réponses à obtenir **par écrit** avant de s'engager.
+Aucun de ces points n'est fermé, aucun n'est garanti d'avance : chacun est
+une demande que le support étudie. La règle : un **délai** au planning, et une
+réponse **écrite** avant tout engagement.
 
 | Besoin | Statut |
 |---|---|
@@ -298,7 +299,8 @@ Par honnêteté, et parce que ces points changent selon les cas :
 
 - **Les coûts en euros.** Ils dépendent de la volumétrie réelle, des gabarits
   retenus et des engagements. Ils se calculent sur votre relevé, pas sur une
-  grille générique.
+  grille générique. Voir [ATTERRIR-SUR-CLEVER-CLOUD.md](ATTERRIR-SUR-CLEVER-CLOUD.md),
+  section 5.
 - **Le nombre maximal de connexions par plan de base managée.** Non publié.
   C'est pourtant le premier mur de l'autoscaling : *pool de connexions ×
   nombre d'instances ≤ limite du plan*. Demandez le chiffre avant de

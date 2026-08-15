@@ -209,7 +209,10 @@ p("- [MIGRER-DEPUIS-SUPABASE.md](MIGRER-DEPUIS-SUPABASE.md) — ce qui se passe,
 p("- [ATTERRIR-SUR-CLEVER-CLOUD.md](ATTERRIR-SUR-CLEVER-CLOUD.md) — le chemin, commande par commande")
 p("- [exemple-cible/](exemple-cible/) — le squelette du backend cible")
 p("- `scripts/mesures-cout.sh` — chronométrez VOTRE fenêtre de bascule (à vide !)")
-p("- `scripts/recette-rls.py` — la matrice qui prouvera que la reprise est fidèle")
+p("- `scripts/recette-generique.py` — la matrice d'accès par identité qui prouvera "
+  "que la reprise est fidèle. Paramétrez `recette.config.json` avec VOS ressources "
+  "et VOS comptes (voir recette.config.exemple.json) ; `recette-rls.py` est la "
+  "version instanciée pour l'application de référence.")
 p("")
 p("*Généré à partir de votre base, en lecture seule. Les correspondances datent "
   "d'août 2026 : revérifiez la documentation avant de vous engager.*")

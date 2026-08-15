@@ -41,8 +41,23 @@ create policy "son propre dossier" on patients
 ```
 
 `set local` est **borné à la transaction** : pas de fuite d'un contexte vers la
-requête suivante, même avec un pool de connexions réutilisées. C'est le point
-qui rend le motif sûr, et c'est celui qu'on rate le plus souvent.
+requête suivante, même avec un pool de connexions réutilisées.
+
+**Et le prérequis qu'on rate le plus souvent** : votre application se connecte
+avec le rôle de l'add-on, qui est **propriétaire des tables** (c'est lui qui
+joue les migrations). Or un propriétaire **contourne la RLS**, sauf si la
+table porte :
+
+```sql
+alter table ma_table force row level security;
+```
+
+Sans ce `FORCE` sur chaque table protégée, toutes vos policies sont
+**silencieusement ignorées**. Contrôle :
+
+```sql
+select relname from pg_class where relrowsecurity and not relforcerowsecurity;
+```
 
 **Migrer vos policies revient donc à remplacer `auth.uid()` par
 `current_setting('app.utilisateur_id', true)::uuid`.** Le reste ne bouge pas.
@@ -78,6 +93,7 @@ clever env --alias mon-app
 | `CELLAR_ADDON_HOST`, `CELLAR_ADDON_KEY_ID`, `CELLAR_ADDON_KEY_SECRET` | add-on Cellar lié |
 | `PORT` | plateforme |
 | `INSTANCE_NUMBER` | plateforme — utilisé pour dédupliquer les crons |
+| `API_SERVICE_TOKEN` | **à poser soi-même** : `clever env set API_SERVICE_TOKEN "$(openssl rand -hex 32)"` — exigé au démarrage, protège `/taches/*` |
 
 ```bash
 clever deploy --alias mon-app

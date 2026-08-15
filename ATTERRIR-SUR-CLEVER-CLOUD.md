@@ -111,13 +111,17 @@ Cinq n'existent pas et se réécrivent : `pgsodium`, `supabase_vault`, `pgmq`,
 **Elles se reprennent telles quelles** — c'est du PostgreSQL standard. Ce qui
 demande une décision, ce sont les **rôles** sur lesquels elles s'appuient :
 `anon`, `authenticated` et `service_role` ne sont pas créables par défaut sur
-un add-on managé. Le support peut les ouvrir sur demande — comptez le délai, et
-obtenez la réponse par écrit.
+un add-on managé. Le support étudie ce type de demande — **ni garanti, ni
+exclu** : comptez le délai, et n'engagez rien sans réponse écrite.
 
 Si vous ne voulez pas dépendre de cette demande, deux options :
 
 - **garder la RLS** en la rattachant au rôle propriétaire, l'application
-  positionnant le contexte utilisateur à chaque requête ;
+  positionnant le contexte utilisateur à chaque requête. **Prérequis absolu** :
+  `alter table … force row level security` sur chaque table protégée — le rôle
+  de l'add-on est propriétaire des tables, et un propriétaire contourne la RLS
+  sans ce `FORCE`. L'oublier laisse toutes les policies silencieusement
+  ignorées ;
 - **remonter l'autorisation dans l'application**, la base ne servant plus de
   garde-fou.
 

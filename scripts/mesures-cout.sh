@@ -30,12 +30,24 @@ U="${SUPABASE_DB_URL:-}"
 SORTIE="${1:-.}"
 mkdir -p "$SORTIE"
 
-chrono() {                      # chrono <fichier_sortie> <commande...>
-  local debut fin
+# chrono <fichier_erreurs> <commande...>  ->  "<duree>;<code retour>"
+# Conserver stderr et le code : un pg_dump qui echoue (version pg_dump trop
+# ancienne, disque plein, coupure) produisait sinon un chiffre credible et
+# faux — le pire des resultats pour dimensionner une bascule.
+chrono() {
+  local debut fin code
   debut=$(date +%s)
-  "${@:2}" >/dev/null 2>&1 || true
+  "${@:2}" 2>"$1"; code=$?
   fin=$(date +%s)
-  echo $((fin - debut))
+  echo "$((fin - debut));$code"
+}
+duree()  { echo "${1%%;*}"; }
+code()   { echo "${1##*;}"; }
+alerte() {                       # alerte <nom> <resultat> <fichier_erreurs>
+  if [[ "$(code "$2")" != "0" ]]; then
+    echo "ECHEC $1 (code $(code "$2")) :" >&2
+    tail -3 "$3" >&2
+  fi
 }
 
 taille() { [[ -f "$1" ]] && wc -c < "$1" | tr -d ' ' || echo 0; }
@@ -51,11 +63,14 @@ SCHEMAS=$(psql "$U" -tAX -c "
                          'supabase_functions','pgmq','pgmq_public')" 2>/dev/null)
 
 echo "-- dump du schema" >&2
-T_SCHEMA=$(chrono x pg_dump "$U" --schema-only $SCHEMAS -f "$SORTIE/dump_schema.sql")
+R_SCHEMA=$(chrono "$SORTIE/schema.err" pg_dump "$U" --schema-only $SCHEMAS -f "$SORTIE/dump_schema.sql")
+alerte "dump schema" "$R_SCHEMA" "$SORTIE/schema.err"
 echo "-- dump des donnees (le plus long)" >&2
-T_DATA=$(chrono x pg_dump "$U" --data-only $SCHEMAS -f "$SORTIE/dump_data.sql")
+R_DATA=$(chrono "$SORTIE/data.err" pg_dump "$U" --data-only $SCHEMAS -f "$SORTIE/dump_data.sql")
+alerte "dump donnees" "$R_DATA" "$SORTIE/data.err"
 echo "-- dump auth et storage" >&2
-T_AUTH=$(chrono x pg_dump "$U" --schema=auth --schema=storage -f "$SORTIE/dump_auth.sql")
+R_AUTH=$(chrono "$SORTIE/auth.err" pg_dump "$U" --schema=auth --schema=storage -f "$SORTIE/dump_auth.sql")
+alerte "dump auth" "$R_AUTH" "$SORTIE/auth.err"
 
 OCTETS_BASE=$(psql "$U" -tAX -c "select pg_database_size(current_database())")
 
@@ -104,7 +119,17 @@ for idx in json.loads(brut):
         if rc == 0:
             entree.update(duree_s=d, maintenance_work_mem_requis="256MB")
         else:
-            entree.update(erreur=err.splitlines()[0][:160] if err else "echec")
+            # Ultime filet : ne JAMAIS laisser la base source sans son index.
+            rc2, err2, _ = sql(ddl, "1GB")
+            if rc2 == 0:
+                entree.update(maintenance_work_mem_requis="1GB",
+                              note="reconstruit au filet 1GB, mesure non representative")
+            else:
+                entree.update(erreur=err.splitlines()[0][:160] if err else "echec",
+                              INDEX_ABSENT=True, restauration_manuelle=ddl)
+                print(f"ATTENTION : index {schema}.{nom} ABSENT de la base — "
+                      f"rejouer le DDL fourni dans restauration_manuelle", file=sys.stderr)
+    entree.setdefault("definition", ddl)
     sortie.append(entree)
 
 print(json.dumps(sortie))
@@ -117,9 +142,9 @@ cat <<JSON
   "horodatage": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
   "base_octets": $OCTETS_BASE,
   "dumps": {
-    "schema":  { "duree_s": $T_SCHEMA, "octets": $(taille "$SORTIE/dump_schema.sql") },
-    "donnees": { "duree_s": $T_DATA,   "octets": $(taille "$SORTIE/dump_data.sql") },
-    "auth":    { "duree_s": $T_AUTH,   "octets": $(taille "$SORTIE/dump_auth.sql") }
+    "schema":  { "duree_s": $(duree "$R_SCHEMA"), "code": $(code "$R_SCHEMA"), "octets": $(taille "$SORTIE/dump_schema.sql") },
+    "donnees": { "duree_s": $(duree "$R_DATA"),   "code": $(code "$R_DATA"),   "octets": $(taille "$SORTIE/dump_data.sql") },
+    "auth":    { "duree_s": $(duree "$R_AUTH"),   "code": $(code "$R_AUTH"),   "octets": $(taille "$SORTIE/dump_auth.sql") }
   },
   "index_vectoriels": $MESURES_INDEX,
   "lecture": [
