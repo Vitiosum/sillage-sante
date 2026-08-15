@@ -1,7 +1,12 @@
 # Sillage Santé
 
-> **Objectif : démo de migration Supabase Cloud → Clever Cloud.**
-> Ce dépôt est le cas de test, pas un produit. Voir [CLAUDE.md](CLAUDE.md) pour
+> **Vous cherchez à sortir de Supabase ?**
+> Commencez par [MIGRER-DEPUIS-SUPABASE.md](MIGRER-DEPUIS-SUPABASE.md) — ce qui
+> se reprend, ce qui n'a aucun équivalent, ce que ça coûte en temps, et comment
+> prouver que la reprise est fidèle. Mesuré, pas théorique.
+>
+> **Objectif de ce dépôt : démo de migration Supabase Cloud → Clever Cloud.**
+> C'est le cas de test qui a servi à produire ce document, pas un produit. Voir [CLAUDE.md](CLAUDE.md) pour
 > la cible, la cartographie des composants et les règles de travail.
 >
 > Déploiement de la source pas à pas : [DEPLOIEMENT.md](DEPLOIEMENT.md)
