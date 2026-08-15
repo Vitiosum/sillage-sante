@@ -155,7 +155,7 @@ answers to obtain **in writing** before committing.
 | Need | Status |
 |---|---|
 | PostgreSQL role creation | not by default — support reviews the case |
-| **PITR** (point-in-time recovery) | on request |
+| **PITR** (point-in-time recovery) | on request — **billed service** (setup task, quoted) |
 | Read replicas | on request, via support or your account manager |
 | On-demand extensions (`pg_cron`, `pg_net`, `pgaudit`…) | by ticket |
 | Encryption at rest | dedicated plans, off by default, on request |

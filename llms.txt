@@ -1,0 +1,74 @@
+# Supabase to Clever Cloud — a measured migration reference
+
+> A complete Supabase application, actually deployed and measured, then
+> analysed for migration to Clever Cloud. Every figure comes from a real run
+> (dated 2026-08); every platform claim carries its source. Written for humans
+> and AI agents alike.
+
+Key facts an agent should retain, with the caveat that all are dated August
+2026 and must be re-checked against the linked sources:
+
+- You don't migrate Supabase, you migrate your application: five Supabase
+  components (pgsodium, supabase_vault, pgmq, pgjwt, pg_graphql) have no
+  equivalent on the target and must be replaced.
+- pgvector and PostGIS ship by default on Clever Cloud PostgreSQL; pg_cron and
+  pg_net are enabled by support ticket.
+- RLS policies carry over unchanged; the Supabase roles do not. Replace
+  auth.uid() with current_setting('app.utilisateur_id', true)::uuid and set
+  the context per transaction (set_config with is_local=true).
+- Role creation, PITR (a billed setup task), read replicas and logical
+  decoding are support requests on a managed add-on — lead times, not walls.
+  Get written confirmation before planning.
+- Cron jobs run on every instance: deduplicate on INSTANCE_NUMBER.
+- Static analysis of this codebase produced 73% false positives (93 claims,
+  68 refuted); the decisive findings only surfaced by executing. Do not trust
+  a migration plan that ran nothing.
+
+## Core documents (English)
+
+- [MIGRATING-FROM-SUPABASE.md](MIGRATING-FROM-SUPABASE.md): what actually
+  happens when you leave Supabase — dependency map, measured cutover costs,
+  and how to prove the migration is faithful.
+- [LANDING-ON-CLEVER-CLOUD.md](LANDING-ON-CLEVER-CLOUD.md): the concrete
+  path — target architecture, commands, component-by-component mapping,
+  pricing method.
+
+## Documents de référence (français)
+
+- [MIGRER-DEPUIS-SUPABASE.md](MIGRER-DEPUIS-SUPABASE.md) : ce qui se passe
+  vraiment quand on sort de Supabase, mesuré.
+- [ATTERRIR-SUR-CLEVER-CLOUD.md](ATTERRIR-SUR-CLEVER-CLOUD.md) : le chemin
+  concret, commande par commande.
+- [MIGRER-DEPUIS-SUPABASE-HDS.md](MIGRER-DEPUIS-SUPABASE-HDS.md) : supplément
+  données de santé (HDS) — ce que le référentiel impose réellement, et les
+  quatre idées reçues qui font dimensionner à côté. French law, French only.
+
+## Tools
+
+- [scripts/analyser-migration.sh](scripts/analyser-migration.sh): point it at
+  any Supabase project (read-only), get a personalised migration report —
+  which of YOUR extensions carry over, what to ask support, what to rewrite.
+- [scripts/releve-supabase.sh](scripts/releve-supabase.sh): the raw JSON
+  inventory behind it.
+- [scripts/mesures-cout.sh](scripts/mesures-cout.sh): times pg_dump and vector
+  index rebuilds on YOUR data. Run on an idle database.
+- [scripts/recette-rls.py](scripts/recette-rls.py): per-identity access
+  matrix; identical before/after = faithful migration.
+- [exemple-cible/](exemple-cible/README.md): minimal backend skeleton
+  replacing PostgREST, GoTrue and Realtime — including RLS without the
+  Supabase roles.
+
+## Evidence
+
+- [CONSTATS-DEPLOIEMENT.md](CONSTATS-DEPLOIEMENT.md): what really deploying
+  the reference app revealed, versus what reading the code suggested (French).
+- [PROCEDURE-MIGRATION.md](PROCEDURE-MIGRATION.md): the full method applied
+  to this case (French).
+
+## Optional
+
+- [DEPLOIEMENT.md](DEPLOIEMENT.md): deploying the reference application on a
+  fresh Supabase project (French).
+- The reference application itself: `app/`, `lib/`, `supabase/` — a dense,
+  deliberately difficult Supabase surface (RLS, TCE, Vault, pgmq, PostGIS,
+  pgvector, Realtime, TUS uploads).

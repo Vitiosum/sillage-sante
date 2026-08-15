@@ -40,6 +40,19 @@ composants n'ont aucun équivalent ailleurs, et une base managée standard ne
 peut pas héberger la stack Supabase. Le chemin le plus simple n'est pas de la
 reconstituer — c'est de la remplacer par un backend ordinaire.
 
+## Analysez votre propre projet
+
+```bash
+SUPABASE_DB_URL='postgresql://…' ./scripts/analyser-migration.sh
+```
+
+Un relevé **en lecture seule** de votre projet Supabase, croisé avec les
+correspondances vérifiées : le rapport ne parle que de ce que *vous* utilisez —
+vos extensions classées (reprises / ticket / à remplacer), vos points
+structurants, et vos demandes au support prêtes à envoyer.
+
+*AI agents: see [llms.txt](llms.txt) for a structured index and the key facts.*
+
 ## Vous voulez du code, pas des documents
 
 **[exemple-cible/](exemple-cible/)** — le squelette du backend qui remplace

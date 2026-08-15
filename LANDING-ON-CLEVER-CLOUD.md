@@ -207,9 +207,10 @@ clever scale --alias my-app --min-instances 1 --max-instances 3 --build-flavor M
 ```
 
 **Backups are daily, kept 7 days.** Frequency and retention are not
-self-service — but **PITR** (point-in-time recovery) is available **on request
-to support**. If you are coming from a Supabase tier with PITR, file that
-request at provisioning time, not at the first incident.
+self-service — but **PITR** (point-in-time recovery) is available **on request to
+support, as a billed service** (a setup task, quoted). If you are coming from
+a Supabase tier with PITR, file that request at provisioning time — the cost
+and lead time belong in the budget, not in the first incident.
 
 ---
 

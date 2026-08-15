@@ -159,7 +159,7 @@ planning, et des réponses à obtenir **par écrit** avant de s'engager.
 | Besoin | Statut |
 |---|---|
 | Création de rôles PostgreSQL | pas par défaut — le support étudie le cas |
-| **PITR** (restauration à un instant donné) | sur demande |
+| **PITR** (restauration à un instant donné) | sur demande — **prestation facturée** (tâche de mise en place, sur devis) |
 | Réplicas de lecture | sur demande, via support ou commercial |
 | Extensions à la demande (`pg_cron`, `pg_net`, `pgaudit`…) | sur ticket |
 | Chiffrement au repos | plans dédiés, non actif par défaut, sur demande |

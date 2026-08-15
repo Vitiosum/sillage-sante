@@ -208,8 +208,10 @@ clever scale --alias mon-app --min-instances 1 --max-instances 3 --build-flavor 
 
 **Les sauvegardes sont quotidiennes, 7 jours.** Fréquence et rétention ne se
 règlent pas soi-même — mais le **PITR** (restauration à un instant donné)
-existe **sur demande au support**. Si vous veniez d'une offre Supabase avec
-PITR, faites la demande au provisionnement, pas au premier incident.
+existe **sur demande au support, comme prestation facturée** (tâche de mise
+en place, sur devis). Si vous veniez d'une offre Supabase avec PITR, faites la
+demande au provisionnement — le coût et le délai se budgètent, pas au premier
+incident.
 
 ---
 
