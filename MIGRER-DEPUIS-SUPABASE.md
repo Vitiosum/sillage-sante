@@ -36,6 +36,11 @@ GoTrue et Realtime par un backend applicatif ordinaire** qui parle à une base
 PostgreSQL managée. Trois à quatre conteneurs disparaissent, et avec eux leur
 exploitation.
 
+> **Le chemin concret** — architecture cible, commandes, correspondance
+> composant par composant — est dans
+> [ATTERRIR-SUR-CLEVER-CLOUD.md](ATTERRIR-SUR-CLEVER-CLOUD.md).
+> Le présent document explique *ce qui se passe* ; celui-là, *comment on fait*.
+
 ---
 
 ## 2. Ce qu'une application Supabase utilise réellement

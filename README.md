@@ -9,6 +9,7 @@ viennent de cette exécution, pas d'une estimation.**
 | Document | Ce qu'il répond |
 |---|---|
 | **[MIGRER-DEPUIS-SUPABASE.md](MIGRER-DEPUIS-SUPABASE.md)** | Ce qui se reprend tel quel, ce qui n'a **aucun équivalent**, ce que coûte la bascule en temps, et comment prouver que la reprise est fidèle. **Commencez ici.** |
+| **[ATTERRIR-SUR-CLEVER-CLOUD.md](ATTERRIR-SUR-CLEVER-CLOUD.md)** | Le chemin concret : l'architecture cible, les commandes, et la correspondance composant par composant — vos policies RLS, vos secrets, vos tâches planifiées, vos buckets. |
 | [MIGRER-DEPUIS-SUPABASE-HDS.md](MIGRER-DEPUIS-SUPABASE-HDS.md) | Le supplément si vous hébergez des données de santé : ce que le référentiel impose réellement — et les quatre idées reçues qui font dimensionner à côté. |
 
 En une phrase : **on ne migre pas Supabase, on migre son application.** Cinq
