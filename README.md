@@ -101,8 +101,8 @@ quel praticien accède à quel dossier, et toutes les policies RLS en dérivent.
 cp .env.example .env.local     # renseigner les clés du projet Supabase
 npm install
 npx supabase link --project-ref <votre-ref>
-npx supabase db push           # applique les 9 migrations
-npx supabase functions deploy  # déploie les 4 Edge Functions
+npx supabase db push --include-all  # applique les 16 migrations
+npx supabase functions deploy       # déploie les 5 Edge Functions
 npm run dev
 ```
 
@@ -116,9 +116,9 @@ Navigateur (Next.js)
    │
    ├── @supabase/supabase-js ──► PostgREST      (tables, vues, RPC, RLS)
    │                          ├► GoTrue         (magic link, OIDC, MFA)
-   │                          ├► Storage API    (3 buckets)
+   │                          ├► Storage API    (4 buckets)
    │                          ├► Realtime       (postgres_changes, broadcast, presence)
-   │                          └► Edge Functions (4 fonctions Deno)
+   │                          └► Edge Functions (5 fonctions Deno)
    │
    └── Server Components ──► PostgREST via cookies (@supabase/ssr)
 
@@ -126,7 +126,7 @@ PostgreSQL
    ├── schéma medical  → exposé via PostgREST
    ├── schéma audit    → jamais exposé
    ├── schéma auth_hooks → appelé par GoTrue
-   ├── pg_cron → 4 tâches planifiées
+   ├── pg_cron → 5 tâches planifiées
    └── pg_net  → appel sortant vers l'antivirus à chaque dépôt
 ```
 
@@ -144,7 +144,7 @@ PostgreSQL
 | `..._auth_hook_claims.sql` | Hook GoTrue `custom_access_token` : claims métier dans le JWT |
 | `..._storage.sql` | 3 buckets, 9 policies `storage.objects` |
 | `..._realtime.sql` | Publication logique, `replica identity full`, policies sur `realtime.messages` |
-| `..._vault_cron_net.sql` | 3 secrets Vault, trigger `pg_net`, 4 jobs `pg_cron` |
+| `..._vault_cron_net.sql` | 3 secrets Vault, trigger `pg_net`, 3 jobs `pg_cron` (5 au total après post-déploiement) |
 | `..._geolocalisation.sql` | PostGIS, `geography(point)` sur les cabinets, index gist, RPC de recherche par rayon, zones d'intervention en polygone |
 | `..._webhooks_et_files.sql` | Database Webhook (`supabase_functions.http_request`), 3 files `pgmq`, trigger d'empilement |
 | `..._storage_avance.sql` | Bucket `imagerie` 5 Go, suivi des téléversements TUS, vue de volumétrie |
