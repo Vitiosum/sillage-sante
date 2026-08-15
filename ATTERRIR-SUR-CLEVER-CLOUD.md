@@ -208,7 +208,78 @@ pas pilotables. Si votre RPO est plus court, prévoyez vos propres dumps.
 
 ---
 
-## 5. Déployer
+## 5. Ce que ça coûte
+
+**Vous ne trouverez pas de prix dans ce document.** Les tarifs bougent, et un
+chiffre figé dans un guide devient faux sans prévenir — ce qui jette le doute
+sur tout le reste. Les sources font foi :
+
+- **Clever Cloud** — [clever.cloud/pricing](https://www.clever.cloud/pricing/),
+  avec un **estimateur** qui chiffre une configuration complète, région par
+  région.
+- **Supabase** — [supabase.com/pricing](https://supabase.com/pricing).
+
+### Les deux modèles ne se comparent pas plan à plan
+
+C'est le piège de tout comparatif de coût entre les deux.
+
+| | Supabase | Clever Cloud |
+|---|---|---|
+| Structure | forfait mensuel par organisation, **plus** des quotas inclus, **plus** des dépassements | consommation, **facturée à la seconde** |
+| Calcul | le compute est facturé à part, par projet | ressource par ressource, au temps réellement consommé |
+| Maîtrise du plafond | quotas et dépassements | **limite de dépense maximale** paramétrable |
+
+Un forfait à quotas ne se compare pas à une consommation. **Le seul comparatif
+honnête part de votre relevé** — celui de la section 2 de
+[MIGRER-DEPUIS-SUPABASE.md](MIGRER-DEPUIS-SUPABASE.md) — et chiffre les deux
+côtés sur *votre* usage réel.
+
+### Ce qu'il faut compter, des deux côtés
+
+À porter dans l'estimateur, une ligne par poste :
+
+- **l'application** : gabarit × nombre d'instances × temps ;
+- **la base** : plan retenu — et un **plan dédié** si vous avez besoin du
+  chiffrement au repos ;
+- **le stockage objet** : volume stocké et trafic sortant ;
+- **les services que vous ajoutez** : messagerie, cache, identité.
+
+Et de l'autre côté, ce qui **disparaît** de votre facture Supabase : les
+quotas d'invocations de fonctions, de bande passante, de stockage, et le
+compute par projet.
+
+### Trois leviers propres à la facturation à la seconde
+
+**Le gabarit minimum est le plancher que vous payez en permanence.** En
+autoscaling vertical, `--min-flavor` définit ce qui tourne en continu, pas ce
+qui tourne au pic. Le régler trop haut par prudence coûte 24 h sur 24.
+
+**L'instance de build se paie au build.** `--build-flavor` permet de compiler
+sur une grosse instance sans porter ce gabarit le reste du temps. C'est le
+levier qui résout le cas « mon application ne peut pas reconstruire son index
+sur son propre gabarit », sans surdimensionner l'exécution.
+
+**`--max-instances` borne la facture** autant que la charge. Le plafond de
+dépense se règle, il n'est pas subi.
+
+Un corollaire agréable : **un environnement de recette ne coûte que le temps
+où il tourne.** Éteint, il ne facture pas.
+
+### Dire les choses honnêtement
+
+Migrer n'est pas automatiquement moins cher. Vous reprenez à votre charge ce
+qui était managé — un backend applicatif remplace PostgREST, GoTrue et
+Realtime, et ce backend, il faut l'écrire et le maintenir.
+
+Ce qu'on gagne se situe ailleurs : la maîtrise du plafond, la facturation au
+temps réel, la localisation, et la sortie d'une dépendance à cinq composants
+qui n'existent nulle part ailleurs.
+
+**Chiffrez avant de décider, et redatez le chiffrage avant de le présenter.**
+
+---
+
+## 6. Déployer
 
 ```bash
 clever deploy --alias mon-app
@@ -228,7 +299,7 @@ clever logs --alias mon-app
 
 ---
 
-## 6. Prouver que la reprise est fidèle
+## 7. Prouver que la reprise est fidèle
 
 Ne concluez pas la migration sur « ça a l'air de marcher ».
 
