@@ -40,6 +40,14 @@ composants n'ont aucun équivalent ailleurs, et une base managée standard ne
 peut pas héberger la stack Supabase. Le chemin le plus simple n'est pas de la
 reconstituer — c'est de la remplacer par un backend ordinaire.
 
+## Vous voulez du code, pas des documents
+
+**[exemple-cible/](exemple-cible/)** — le squelette du backend qui remplace
+PostgREST, GoTrue et Realtime. Son point central : **garder vos policies RLS
+sans les rôles Supabase**, par un contexte de transaction — migrer une policy
+revient à remplacer `auth.uid()` par `current_setting(...)`. Chaque fichier
+annote ce qu'il remplace et le piège qu'il évite.
+
 ## Vous voulez l'application de référence
 
 C'est le code de ce dépôt : une plateforme de téléconsultation sur **Supabase
